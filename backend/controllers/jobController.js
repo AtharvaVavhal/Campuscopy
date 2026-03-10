@@ -1,8 +1,22 @@
 const { emitJobStatus } = require('../utils/socket');
 const path = require("path");
+const fs = require("fs");
 const QRCode = require("qrcode");
 const { v4: uuidv4 } = require("uuid");
+const pdfParse = require("pdf-parse");
 const Job = require("../models/job");
+
+// Auto-count PDF pages
+const getPdfPageCount = async (filePath) => {
+  try {
+    const dataBuffer = fs.readFileSync(filePath);
+    const data = await pdfParse(dataBuffer);
+    return data.numpages;
+  } catch (err) {
+    console.error("PDF parse error:", err.message);
+    return null;
+  }
+};
 
 // Cost calculation
 // B&W: ₹1 per page, Color: ₹5 per page, Double sided: 0.8x multiplier
@@ -28,8 +42,14 @@ const uploadJob = async (req, res) => {
       double_sided = false,
     } = req.body;
 
-    if (!pages || isNaN(pages)) {
-      return res.status(400).json({ error: "pages is required and must be a number" });
+    // Auto-count pages from PDF if not provided
+    let pageCount = parseInt(pages);
+    if (!pageCount || isNaN(pageCount)) {
+      const autoCount = await getPdfPageCount(req.file.path);
+      if (!autoCount) {
+        return res.status(400).json({ error: "Could not read PDF page count. Please enter pages manually." });
+      }
+      pageCount = autoCount;
     }
 
     if (!printer_id) {
@@ -37,7 +57,7 @@ const uploadJob = async (req, res) => {
     }
 
     const cost = calculateCost({
-      pages: parseInt(pages),
+      pages: pageCount,
       copies: parseInt(copies),
       color: color === "true" || color === true,
       double_sided: double_sided === "true" || double_sided === true,
@@ -50,7 +70,7 @@ const uploadJob = async (req, res) => {
       printer_id,
       file_path: req.file.path,
       file_name: req.file.originalname,
-      pages: parseInt(pages),
+      pages: pageCount,
       copies: parseInt(copies),
       color: color === "true" || color === true,
       double_sided: double_sided === "true" || double_sided === true,

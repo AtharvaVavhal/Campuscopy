@@ -33,12 +33,36 @@ function updateCost() {
 }
 
 // ─── File Select ─────────────────────────────────────────────
-function onFileSelect(input) {
+async function onFileSelect(input) {
   if (input.files.length > 0) {
+    const file = input.files[0];
     const area = document.getElementById('upload-area');
     area.classList.add('has-file');
-    document.getElementById('file-name').textContent = input.files[0].name;
-    document.querySelector('.upload-icon').textContent = '✅';
+    document.getElementById('file-name').textContent = file.name;
+    document.querySelector('.upload-icon').textContent = '⏳';
+    document.getElementById('upload-btn').disabled = true;
+
+    try {
+      // Auto-count pages using PDF.js
+      const arrayBuffer = await file.arrayBuffer();
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pageCount = pdf.numPages;
+
+      document.getElementById('pages').value = pageCount;
+      document.querySelector('.upload-icon').textContent = '✅';
+
+      const pagesInput = document.getElementById('pages');
+      pagesInput.style.background = '#f0fdf4';
+      pagesInput.style.borderColor = '#10b981';
+
+      showToast('Detected ' + pageCount + ' pages automatically!');
+    } catch (err) {
+      console.error('PDF read error:', err);
+      document.querySelector('.upload-icon').textContent = '✅';
+      showToast('Could not auto-detect pages. Please enter manually.');
+    }
+
     updateCost();
   }
 }
