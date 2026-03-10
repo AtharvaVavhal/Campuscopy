@@ -1,49 +1,87 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
-export default function Layout() {
+const NAV = [
+  { path: '/jobs', icon: '🖨️', label: 'Print Queue' },
+  { path: '/analytics', icon: '📊', label: 'Analytics' },
+  { path: '/printers', icon: '⚙️', label: 'Printers' },
+];
+
+export default function Layout({ children }) {
+  const location = useLocation();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
 
-  const logout = () => {
+  function logout() {
     localStorage.removeItem('token');
     navigate('/login');
-  };
-
-  const navStyle = ({ isActive }) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '10px 16px',
-    borderRadius: '10px',
-    fontWeight: 600,
-    fontSize: '14px',
-    color: isActive ? '#6366f1' : '#6b7280',
-    background: isActive ? '#eef2ff' : 'transparent',
-    transition: 'all 0.2s',
-  });
+  }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{
+      display: 'flex', minHeight: '100vh',
+      background: '#08080f', color: '#eeeef5',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+    }}>
       {/* Sidebar */}
-      <aside style={{ width: '220px', background: 'white', borderRight: '1px solid #e5e7eb', padding: '24px 16px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ marginBottom: '32px', paddingLeft: '8px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#6366f1' }}>📄 CampusCopy</div>
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>Admin Dashboard</div>
+      <aside style={{
+        width: 220, flexShrink: 0,
+        background: 'rgba(255,255,255,0.03)',
+        borderRight: '1px solid rgba(255,255,255,0.07)',
+        display: 'flex', flexDirection: 'column',
+        padding: '28px 0', position: 'sticky', top: 0, height: '100vh',
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '0 24px 32px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 22, letterSpacing: 2,
+            background: 'linear-gradient(135deg,#a78bfa,#34d399)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>CampusCopy</div>
+          <div style={{ fontSize: 11, color: 'rgba(238,238,245,0.4)', marginTop: 4, fontWeight: 600 }}>
+            Admin Dashboard
+          </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-          <NavLink to="/queue" style={navStyle}>🖨️ Job Queue</NavLink>
-          <NavLink to="/analytics" style={navStyle}>📊 Analytics</NavLink>
-          <NavLink to="/printers" style={navStyle}>🖥️ Printers</NavLink>
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {NAV.map(n => {
+            const active = location.pathname === n.path;
+            return (
+              <Link key={n.path} to={n.path} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 10, textDecoration: 'none',
+                fontSize: 14, fontWeight: 600,
+                background: active ? 'rgba(167,139,250,0.12)' : 'transparent',
+                color: active ? '#a78bfa' : 'rgba(238,238,245,0.5)',
+                border: active ? '1px solid rgba(167,139,250,0.2)' : '1px solid transparent',
+                transition: 'all 0.2s',
+              }}>
+                <span style={{ fontSize: 16 }}>{n.icon}</span>
+                {n.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        <button onClick={logout} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#fee2e2', color: '#dc2626', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
-          🚪 Logout
-        </button>
+        {/* Logout */}
+        <div style={{ padding: '0 12px' }}>
+          <button onClick={logout} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 12px', borderRadius: 10,
+            background: 'none', border: '1px solid rgba(255,255,255,0.07)',
+            color: 'rgba(238,238,245,0.4)', fontSize: 14, fontWeight: 600,
+            cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit',
+          }}>
+            <span>🚪</span> Logout
+          </button>
+        </div>
       </aside>
 
-      {/* Main content */}
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
-        <Outlet />
+      {/* Main */}
+      <main style={{ flex: 1, overflow: 'auto', minHeight: '100vh' }}>
+        {children}
       </main>
     </div>
   );

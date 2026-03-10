@@ -1,113 +1,141 @@
 import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import api from '../api/client';
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 10, padding: '10px 14px', fontSize: 13,
+    }}>
+      <div style={{ color: 'rgba(238,238,245,0.5)', marginBottom: 4 }}>{label}</div>
+      {payload.map(p => (
+        <div key={p.name} style={{ color: p.color, fontWeight: 700 }}>
+          {p.name}: {p.name === 'Revenue' ? '₹' : ''}{p.value}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+function StatCard({ label, value, sub, color, icon }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 18, padding: '24px 24px', position: 'relative', overflow: 'hidden',
+      transition: 'border-color 0.3s',
+    }}>
+      <div style={{
+        position: 'absolute', top: -20, right: -20, width: 80, height: 80,
+        borderRadius: '50%', background: `${color}15`, filter: 'blur(20px)',
+      }}/>
+      <div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div>
+      <div style={{
+        fontFamily: "'Bebas Neue',sans-serif", fontSize: 40,
+        background: `linear-gradient(135deg,#eeeef5,${color})`,
+        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        lineHeight: 1,
+      }}>{value}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(238,238,245,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color, marginTop: 4, fontWeight: 600 }}>{sub}</div>}
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
-  const { data: jobsData } = useQuery({
-    queryKey: ['all-jobs'],
-    queryFn: async () => {
-      const printers = await api.get('/api/printers').then(r => r.data.printers);
-      const allJobs = [];
-      for (const p of printers) {
-        const jobs = await api.get('/api/jobs/printer/' + p.id).then(r => r.data.jobs);
-        allJobs.push(...jobs);
-      }
-      return allJobs;
-    },
+  const { data } = useQuery({
+    queryKey: ['analytics'],
+    queryFn: () => api.get('/api/jobs/printer/5b4bedf3-3550-4faa-ac3d-d4f490772258').then(r => r.data),
+    refetchInterval: 30000,
   });
 
-  const jobs = jobsData || [];
+  const jobs = data?.jobs || [];
 
-  // Jobs per day (last 7 days)
-  const jobsByDay = getLast7Days(jobs);
+  // Build last 7 days
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const key = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en', { weekday: 'short' });
+    const dayJobs = jobs.filter(j => j.created_at?.startsWith(key) && j.status === 'done');
+    return {
+      label, jobs: dayJobs.length,
+      revenue: dayJobs.reduce((s, j) => s + parseFloat(j.cost || 0), 0).toFixed(0),
+    };
+  });
 
-  // Revenue per day
-  const revenueByDay = getLast7DaysRevenue(jobs);
-
-  // Summary stats
-  const totalRevenue = jobs.filter(j => ['paid','queued','printing','done'].includes(j.status)).reduce((sum, j) => sum + parseFloat(j.cost), 0);
-  const totalJobs = jobs.length;
-  const completedJobs = jobs.filter(j => j.status === 'done').length;
-  const pendingJobs = jobs.filter(j => ['pending','paid','queued','printing'].includes(j.status)).length;
+  const totalRevenue = jobs.filter(j => j.status === 'done').reduce((s, j) => s + parseFloat(j.cost || 0), 0);
+  const doneJobs = jobs.filter(j => j.status === 'done').length;
+  const todayJobs = jobs.filter(j => {
+    const today = new Date().toISOString().split('T')[0];
+    return j.created_at?.startsWith(today);
+  }).length;
+  const colorJobs = jobs.filter(j => j.color).length;
 
   return (
-    <div>
-      <h1 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>Analytics</h1>
-      <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>Overview of your print shop</p>
+    <div style={{ padding: '32px 36px', maxWidth: 1000 }}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 36, letterSpacing: 0.5, marginBottom: 4 }}>Analytics</div>
+        <div style={{ fontSize: 13, color: 'rgba(238,238,245,0.45)' }}>Revenue and job performance overview</div>
+      </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-        <StatCard label="Total Revenue" value={'Rs.' + totalRevenue.toFixed(2)} icon="💰" color="#6366f1" />
-        <StatCard label="Total Jobs" value={totalJobs} icon="📄" color="#0ea5e9" />
-        <StatCard label="Completed" value={completedJobs} icon="✅" color="#10b981" />
-        <StatCard label="In Progress" value={pendingJobs} icon="⏳" color="#f59e0b" />
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 32 }}>
+        <StatCard icon="💰" label="Total Revenue" value={'₹' + totalRevenue.toFixed(0)} color="#34d399" sub="All time" />
+        <StatCard icon="🖨️" label="Jobs Done" value={doneJobs} color="#a78bfa" sub="Completed" />
+        <StatCard icon="📅" label="Today" value={todayJobs} color="#fb923c" sub="Jobs received" />
+        <StatCard icon="🎨" label="Color Jobs" value={colorJobs} color="#60a5fa" sub="Color prints" />
       </div>
 
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Jobs per Day</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={jobsByDay}>
-              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="jobs" fill="#6366f1" radius={[6,6,0,0]} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '24px' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 20 }}>Jobs Per Day</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={days}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="label" tick={{ fill: 'rgba(238,238,245,0.4)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'rgba(238,238,245,0.4)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="jobs" name="Jobs" fill="#a78bfa" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Revenue per Day</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={revenueByDay}>
-              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <Tooltip formatter={(v) => 'Rs.' + v.toFixed(2)} />
-              <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '24px' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 20 }}>Revenue (₹) Per Day</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={days}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="label" tick={{ fill: 'rgba(238,238,245,0.4)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'rgba(238,238,245,0.4)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#34d399" strokeWidth={2} dot={{ fill: '#34d399', r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Recent jobs */}
+      <div style={{ marginTop: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '24px' }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 18 }}>Recent Completed Jobs</div>
+        {jobs.filter(j => j.status === 'done').slice(0, 8).length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 32, color: 'rgba(238,238,245,0.3)', fontSize: 13 }}>No completed jobs yet</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {jobs.filter(j => j.status === 'done').slice(0, 8).map(j => (
+              <div key={j.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#eeeef5' }}>📄 {j.file_name}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(238,238,245,0.4)', marginTop: 2 }}>{j.pages} pages · {j.color ? 'Color' : 'B&W'} · {new Date(j.created_at).toLocaleString()}</div>
+                </div>
+                <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#34d399' }}>₹{j.cost}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-}
-
-function StatCard({ label, value, icon, color }) {
-  return (
-    <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-      <div style={{ fontSize: '28px', marginBottom: '8px' }}>{icon}</div>
-      <div style={{ fontSize: '24px', fontWeight: '800', color }}>{value}</div>
-      <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>{label}</div>
-    </div>
-  );
-}
-
-function getLast7Days(jobs) {
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const label = d.toLocaleDateString('en', { weekday: 'short' });
-    const count = jobs.filter(j => j.created_at.slice(0, 10) === key).length;
-    days.push({ day: label, jobs: count });
-  }
-  return days;
-}
-
-function getLast7DaysRevenue(jobs) {
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const label = d.toLocaleDateString('en', { weekday: 'short' });
-    const revenue = jobs
-      .filter(j => j.created_at.slice(0, 10) === key && ['paid','queued','printing','done'].includes(j.status))
-      .reduce((sum, j) => sum + parseFloat(j.cost), 0);
-    days.push({ day: label, revenue });
-  }
-  return days;
 }

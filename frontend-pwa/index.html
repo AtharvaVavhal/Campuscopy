@@ -1,1326 +1,575 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CampusCopy</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0a0a0f" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #0a0a0f;
-      --surface: rgba(255,255,255,0.04);
-      --surface2: rgba(255,255,255,0.08);
-      --border: rgba(255,255,255,0.08);
-      --accent: #7c6df0;
-      --accent2: #e879f9;
-      --accent3: #06b6d4;
-      --text: #f0f0f8;
-      --muted: rgba(240,240,248,0.45);
-      --success: #10d9a0;
-      --danger: #f43f5e;
-      --warning: #fbbf24;
-    }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CampusCopy — Print Smarter at VIT Pune</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --ink:#08080f;
+  --surface:rgba(255,255,255,0.04);
+  --border:rgba(255,255,255,0.07);
+  --violet:#a78bfa;
+  --emerald:#34d399;
+  --coral:#fb923c;
+  --text:#eeeef5;
+  --muted:rgba(238,238,245,0.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--ink);
+  color:var(--text);
+  overflow-x:hidden;
+  cursor:none;
+}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Custom cursor */
+.cursor{
+  position:fixed;width:10px;height:10px;border-radius:50%;
+  background:var(--violet);pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);transition:transform 0.1s;
+  mix-blend-mode:screen;
+}
+.cursor-ring{
+  position:fixed;width:36px;height:36px;border-radius:50%;
+  border:1.5px solid rgba(167,139,250,0.4);pointer-events:none;z-index:9998;
+  transform:translate(-50%,-50%);transition:all 0.15s ease;
+}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+/* Grid overlay */
+.grid-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(167,139,250,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(167,139,250,0.04) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+}
 
-    /* ── Canvas Background ── */
-    #bg-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
+/* Noise grain */
+body::after{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
 
-    /* ── Screens ── */
-    .screen {
-      display: none;
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      padding: 0 0 40px;
-      max-width: 480px;
-      margin: 0 auto;
-      opacity: 0;
-      transform: translateY(24px);
-      transition: opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1);
-    }
-    .screen.active {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .screen.exit {
-      opacity: 0;
-      transform: translateY(-20px);
-      pointer-events: none;
-    }
+/* Nav */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:20px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid transparent;
+  transition:border-color 0.3s;
+}
+nav.scrolled{border-color:var(--border);}
+.nav-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:26px;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--violet),var(--emerald));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.nav-links{display:flex;gap:32px;align-items:center;}
+.nav-links a{
+  color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;
+  transition:color 0.2s;
+}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{
+  background:linear-gradient(135deg,var(--violet),#7c3aed);
+  color:white;border:none;padding:10px 24px;border-radius:8px;
+  font-size:14px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:none;transition:all 0.3s;text-decoration:none;
+  box-shadow:0 0 20px rgba(167,139,250,0.25);
+}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 24px rgba(167,139,250,0.4);}
 
-    /* ── Header ── */
-    .app-header {
-      padding: 28px 24px 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .logo {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 20px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -0.5px;
-    }
-    .logo-dot {
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent2);
-      margin-left: 4px;
-      vertical-align: middle;
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.5); opacity: 0.7; }
-    }
+/* Hero */
+.hero{
+  position:relative;z-index:2;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:120px 24px 80px;
+  overflow:hidden;
+}
+.hero-orb{
+  position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;
+}
+.orb1{width:500px;height:500px;background:rgba(167,139,250,0.12);top:-100px;left:-100px;}
+.orb2{width:400px;height:400px;background:rgba(52,211,153,0.08);bottom:-50px;right:-50px;}
+.orb3{width:300px;height:300px;background:rgba(251,146,60,0.07);top:50%;left:50%;transform:translate(-50%,-50%);}
 
-    /* ── Page Title ── */
-    .page-title {
-      padding: 32px 24px 0;
-    }
-    .page-title h1 {
-      font-family: 'Syne', sans-serif;
-      font-size: 30px;
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -1px;
-    }
-    .page-title p {
-      font-size: 14px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-    .gradient-text {
-      background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);
+  border-radius:50px;padding:6px 16px;font-size:13px;color:var(--violet);
+  font-weight:600;margin-bottom:32px;
+  animation:badge-in 0.8s cubic-bezier(0.16,1,0.3,1) both;
+}
+.badge-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--emerald);
+  animation:pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.6);opacity:0.6;}}
+@keyframes badge-in{from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:translateY(0);}}
 
-    /* ── Glass Card ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 20px;
-      margin: 16px 24px 0;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.3s, transform 0.2s;
-    }
-    .card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 20px;
-      background: linear-gradient(135deg, rgba(124,109,240,0.06) 0%, transparent 60%);
-      pointer-events: none;
-    }
-    .card:hover {
-      border-color: rgba(124,109,240,0.3);
-    }
+.hero h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(72px,12vw,160px);
+  line-height:0.9;letter-spacing:-1px;
+  margin-bottom:24px;
+  animation:hero-in 1s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+}
+.hero h1 .line1{display:block;color:var(--text);}
+.hero h1 .line2{
+  display:block;
+  background:linear-gradient(135deg,var(--violet) 0%,var(--coral) 50%,var(--emerald) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  background-size:200% 200%;
+  animation:gradient-shift 4s ease infinite;
+}
+@keyframes gradient-shift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+@keyframes hero-in{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
 
-    /* ── Upload Zone ── */
-    .upload-zone {
-      border: 2px dashed rgba(124,109,240,0.3);
-      border-radius: 18px;
-      padding: 40px 24px;
-      text-align: center;
-      cursor: pointer;
-      margin: 16px 24px 0;
-      position: relative;
-      transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-      background: rgba(124,109,240,0.04);
-      overflow: hidden;
-    }
-    .upload-zone::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 50%, rgba(124,109,240,0.15), transparent 70%);
-      opacity: 0;
-      transition: opacity 0.4s;
-    }
-    .upload-zone:hover::before,
-    .upload-zone.drag-over::before {
-      opacity: 1;
-    }
-    .upload-zone:hover,
-    .upload-zone.drag-over {
-      border-color: var(--accent);
-      transform: scale(1.01);
-    }
-    .upload-zone.has-file {
-      border-color: var(--success);
-      border-style: solid;
-      background: rgba(16,217,160,0.05);
-    }
-    .upload-zone.has-file::before {
-      background: radial-gradient(circle at 50% 50%, rgba(16,217,160,0.1), transparent 70%);
-      opacity: 1;
-    }
-    .upload-icon-wrap {
-      width: 72px;
-      height: 72px;
-      border-radius: 20px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-      font-size: 32px;
-      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .upload-zone:hover .upload-icon-wrap {
-      transform: translateY(-4px) scale(1.05);
-      border-color: rgba(124,109,240,0.5);
-      background: rgba(124,109,240,0.15);
-    }
-    .upload-zone.has-file .upload-icon-wrap {
-      background: rgba(16,217,160,0.15);
-      border-color: rgba(16,217,160,0.4);
-    }
-    .upload-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .upload-sub {
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .file-name {
-      font-size: 13px;
-      color: var(--success);
-      font-weight: 500;
-      margin-top: 8px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      padding: 0 20px;
-    }
-    .page-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16,217,160,0.15);
-      border: 1px solid rgba(16,217,160,0.3);
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-size: 12px;
-      color: var(--success);
-      font-weight: 600;
-      margin-top: 10px;
-      animation: fade-in-up 0.4s ease;
-    }
-    @keyframes fade-in-up {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+.hero p{
+  font-size:18px;color:var(--muted);max-width:520px;margin:0 auto 48px;
+  line-height:1.7;font-weight:400;
+  animation:hero-in 1s cubic-bezier(0.16,1,0.3,1) 0.25s both;
+}
 
-    /* ── Form Elements ── */
-    .field {
-      margin-top: 16px;
-    }
-    .field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 8px;
-    }
-    .field input,
-    .field select {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 13px 16px;
-      font-size: 15px;
-      font-family: 'DM Sans', sans-serif;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.3s, box-shadow 0.3s;
-      -webkit-appearance: none;
-    }
-    .field input:focus,
-    .field select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(124,109,240,0.15);
-    }
-    .field select option { background: #1a1a2e; }
-    .field-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+.hero-btns{
+  display:flex;gap:16px;justify-content:center;flex-wrap:wrap;
+  animation:hero-in 1s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+}
+.btn-main{
+  background:linear-gradient(135deg,var(--violet),#7c3aed);
+  color:white;border:none;padding:16px 36px;border-radius:12px;
+  font-size:16px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:none;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  text-decoration:none;box-shadow:0 0 40px rgba(167,139,250,0.3);
+  position:relative;overflow:hidden;
+}
+.btn-main::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,transparent 100%);
+}
+.btn-main:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 8px 40px rgba(167,139,250,0.5);}
+.btn-sec{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--muted);padding:16px 36px;border-radius:12px;
+  font-size:16px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:none;transition:all 0.3s;text-decoration:none;
+}
+.btn-sec:hover{border-color:rgba(167,139,250,0.4);color:var(--text);}
 
-    /* ── Toggle ── */
-    .toggle-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .toggle-item:last-child { border-bottom: none; }
-    .toggle-label { font-size: 15px; font-weight: 500; }
-    .toggle-price {
-      font-size: 12px;
-      color: var(--accent);
-      font-weight: 600;
-      margin-top: 2px;
-    }
-    .switch {
-      position: relative;
-      width: 48px;
-      height: 26px;
-      flex-shrink: 0;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background: rgba(255,255,255,0.1);
-      border-radius: 26px;
-      transition: 0.3s;
-      border: 1px solid var(--border);
-    }
-    .slider:before {
-      content: '';
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      left: 3px;
-      bottom: 3px;
-      background: var(--muted);
-      border-radius: 50%;
-      transition: 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    input:checked + .slider {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-color: transparent;
-    }
-    input:checked + .slider:before {
-      transform: translateX(22px);
-      background: white;
-    }
+/* Scroll indicator */
+.scroll-hint{
+  position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  animation:fade-in 1s 1.5s both;
+}
+.scroll-line{
+  width:1px;height:48px;background:linear-gradient(var(--violet),transparent);
+  animation:scroll-anim 2s ease-in-out infinite;
+}
+@keyframes scroll-anim{0%{transform:scaleY(0);transform-origin:top;}50%{transform:scaleY(1);transform-origin:top;}51%{transform-origin:bottom;}100%{transform:scaleY(0);transform-origin:bottom;}}
+@keyframes fade-in{from{opacity:0;}to{opacity:1;}}
 
-    /* ── Cost Display ── */
-    .cost-display {
-      margin: 16px 24px 0;
-      background: linear-gradient(135deg, rgba(124,109,240,0.12), rgba(232,121,249,0.08));
-      border: 1px solid rgba(124,109,240,0.2);
-      border-radius: 20px;
-      padding: 24px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .cost-display::after {
-      content: '';
-      position: absolute;
-      top: -40px;
-      right: -40px;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(232,121,249,0.2), transparent 70%);
-      pointer-events: none;
-    }
-    .cost-amount {
-      font-family: 'Syne', sans-serif;
-      font-size: 48px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #fff, var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .cost-amount.bump {
-      transform: scale(1.08);
-    }
-    .cost-label {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 6px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .cost-breakdown {
-      margin-top: 10px;
-      font-size: 12px;
-      color: rgba(124,109,240,0.8);
-    }
+/* Stats */
+.stats{
+  position:relative;z-index:2;
+  padding:80px 48px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.stat{
+  padding:40px;text-align:center;position:relative;
+  background:var(--surface);
+  animation:stat-in 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+.stat:nth-child(2){animation-delay:0.1s;}
+.stat:nth-child(3){animation-delay:0.2s;}
+.stat-val{
+  font-family:'Bebas Neue',sans-serif;font-size:64px;
+  background:linear-gradient(135deg,var(--text),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.stat-label{font-size:14px;color:var(--muted);font-weight:500;margin-top:8px;}
+@keyframes stat-in{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 
-    /* ── Button ── */
-    .btn {
-      display: block;
-      width: calc(100% - 48px);
-      margin: 16px 24px 0;
-      padding: 16px;
-      border: none;
-      border-radius: 14px;
-      font-size: 16px;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-      letter-spacing: 0.3px;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
-      pointer-events: none;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white;
-      box-shadow: 0 8px 32px rgba(124,109,240,0.35);
-    }
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px) scale(1.01);
-      box-shadow: 0 12px 40px rgba(124,109,240,0.5);
-    }
-    .btn-primary:active:not(:disabled) {
-      transform: translateY(0) scale(0.99);
-    }
-    .btn-primary:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-    .btn-ghost {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--muted);
-    }
-    .btn-ghost:hover {
-      border-color: rgba(124,109,240,0.4);
-      color: var(--text);
-      transform: translateY(-1px);
-    }
+/* How it works */
+.section{position:relative;z-index:2;padding:120px 48px;}
+.section-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
+  color:var(--violet);margin-bottom:20px;
+}
+.section-tag::before{
+  content:'';width:24px;height:1px;background:var(--violet);
+}
+.section h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,7vw,96px);
+  line-height:0.9;letter-spacing:-1px;margin-bottom:16px;
+}
+.section p{font-size:17px;color:var(--muted);max-width:500px;line-height:1.7;}
 
-    /* ── Loading Spinner ── */
-    .spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 2.5px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+.steps{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  margin-top:80px;background:var(--border);
+}
+.step{
+  background:var(--ink);padding:40px 32px;position:relative;overflow:hidden;
+  transition:background 0.3s;
+}
+.step:hover{background:rgba(167,139,250,0.05);}
+.step::before{
+  content:attr(data-num);
+  position:absolute;top:24px;right:24px;
+  font-family:'Bebas Neue',sans-serif;font-size:80px;
+  color:rgba(167,139,250,0.06);line-height:1;
+  transition:color 0.3s;
+}
+.step:hover::before{color:rgba(167,139,250,0.12);}
+.step-icon{
+  font-size:36px;margin-bottom:20px;
+  display:block;
+  transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.step:hover .step-icon{transform:scale(1.2) translateY(-4px);}
+.step h3{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.5px;margin-bottom:12px;}
+.step p{font-size:14px;color:var(--muted);line-height:1.6;}
 
-    /* ── Payment Screen ── */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 16px;
-    }
-    .summary-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
-    }
-    .summary-val {
-      font-family: 'Syne', sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .summary-key {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 3px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .file-info-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .file-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: rgba(124,109,240,0.15);
-      border: 1px solid rgba(124,109,240,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    .file-meta { flex: 1; overflow: hidden; }
-    .file-meta-name {
-      font-weight: 600;
-      font-size: 14px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .file-meta-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+/* Features */
+.features{
+  position:relative;z-index:2;padding:0 48px 120px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--border);border-top:1px solid var(--border);
+}
+.feature{
+  background:var(--ink);padding:48px 40px;
+  position:relative;overflow:hidden;transition:background 0.3s;
+}
+.feature:hover{background:rgba(167,139,250,0.04);}
+.feature-accent{
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--violet),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.feature:hover .feature-accent{opacity:1;}
+.feature-icon{
+  width:52px;height:52px;border-radius:14px;
+  background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin-bottom:24px;
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.feature:hover .feature-icon{
+  transform:scale(1.1);background:rgba(167,139,250,0.2);
+  box-shadow:0 0 20px rgba(167,139,250,0.2);
+}
+.feature h3{font-size:18px;font-weight:700;margin-bottom:10px;}
+.feature p{font-size:14px;color:var(--muted);line-height:1.65;}
 
-    /* ── Status Screen ── */
-    .progress-track {
-      margin: 24px 24px 0;
-      position: relative;
-    }
-    .progress-line {
-      position: absolute;
-      top: 18px;
-      left: 18px;
-      right: 18px;
-      height: 2px;
-      background: var(--border);
-      z-index: 0;
-    }
-    .progress-line-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 2px;
-      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
-      width: 0%;
-    }
-    .progress-steps {
-      display: flex;
-      justify-content: space-between;
-      position: relative;
-      z-index: 1;
-    }
-    .step {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-    .step-dot {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--bg);
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--muted);
-      transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .step-dot.active {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-color: transparent;
-      color: white;
-      box-shadow: 0 0 20px rgba(124,109,240,0.5);
-      transform: scale(1.15);
-    }
-    .step-dot.done {
-      background: linear-gradient(135deg, var(--success), #059669);
-      border-color: transparent;
-      color: white;
-      box-shadow: 0 0 16px rgba(16,217,160,0.4);
-    }
-    .step-label {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+/* Pricing */
+.pricing{
+  position:relative;z-index:2;padding:120px 48px;
+  text-align:center;
+}
+.price-cards{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:24px;
+  max-width:700px;margin:80px auto 0;
+}
+.price-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:24px;padding:40px;text-align:left;
+  position:relative;overflow:hidden;transition:border-color 0.3s,transform 0.3s;
+}
+.price-card:hover{border-color:rgba(167,139,250,0.3);transform:translateY(-4px);}
+.price-card.featured{
+  border-color:rgba(167,139,250,0.3);
+  background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(124,58,237,0.05));
+}
+.price-card.featured::before{
+  content:'POPULAR';position:absolute;top:20px;right:20px;
+  font-size:10px;font-weight:700;letter-spacing:2px;color:var(--violet);
+  background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);
+  padding:4px 10px;border-radius:20px;
+}
+.price-tag{
+  font-family:'Bebas Neue',sans-serif;font-size:56px;
+  background:linear-gradient(135deg,var(--text),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin:16px 0 8px;
+}
+.price-unit{font-size:14px;color:var(--muted);}
+.price-name{font-size:20px;font-weight:700;margin-bottom:8px;}
+.price-desc{font-size:14px;color:var(--muted);line-height:1.6;}
 
-    /* ── Status Card ── */
-    .status-card {
-      margin: 20px 24px 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 32px 24px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .status-glow {
-      position: absolute;
-      top: -60px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      pointer-events: none;
-      transition: all 0.8s;
-    }
-    .status-emoji {
-      font-size: 64px;
-      margin-bottom: 16px;
-      display: block;
-      position: relative;
-      z-index: 1;
-      animation: float 3s ease-in-out infinite;
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    .status-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 24px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      position: relative;
-      z-index: 1;
-    }
-    .status-sub {
-      font-size: 14px;
-      color: var(--muted);
-      margin-bottom: 16px;
-      position: relative;
-      z-index: 1;
-    }
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      position: relative;
-      z-index: 1;
-    }
-    .badge-pending { background: rgba(251,191,36,0.15); color: var(--warning); border: 1px solid rgba(251,191,36,0.3); }
-    .badge-paid { background: rgba(16,217,160,0.15); color: var(--success); border: 1px solid rgba(16,217,160,0.3); }
-    .badge-queued { background: rgba(6,182,212,0.15); color: var(--accent3); border: 1px solid rgba(6,182,212,0.3); }
-    .badge-printing { background: rgba(124,109,240,0.15); color: var(--accent); border: 1px solid rgba(124,109,240,0.3); }
-    .badge-done { background: rgba(16,217,160,0.15); color: var(--success); border: 1px solid rgba(16,217,160,0.3); }
-    .badge-failed { background: rgba(244,63,94,0.15); color: var(--danger); border: 1px solid rgba(244,63,94,0.3); }
+/* CTA */
+.cta-section{
+  position:relative;z-index:2;padding:120px 48px;text-align:center;
+  overflow:hidden;
+}
+.cta-section::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(167,139,250,0.08),transparent);
+  pointer-events:none;
+}
+.cta-section h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,8vw,100px);
+  line-height:0.9;letter-spacing:-1px;margin-bottom:24px;
+}
+.cta-section p{font-size:18px;color:var(--muted);margin-bottom:48px;}
 
-    /* ── QR Box ── */
-    .qr-container {
-      margin: 16px 24px 0;
-      background: white;
-      border-radius: 20px;
-      padding: 24px;
-      text-align: center;
-      animation: fade-in-up 0.5s ease;
-    }
-    .qr-container img {
-      width: 180px;
-      height: 180px;
-      border-radius: 8px;
-    }
-    .qr-hint {
-      font-size: 13px;
-      color: #555;
-      margin-top: 12px;
-      font-weight: 500;
-    }
+/* Footer */
+footer{
+  position:relative;z-index:2;
+  border-top:1px solid var(--border);
+  padding:40px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+.footer-logo{
+  font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--muted);
+}
+.footer-text{font-size:13px;color:var(--muted);}
+.footer-links{display:flex;gap:24px;}
+.footer-links a{font-size:13px;color:var(--muted);text-decoration:none;transition:color 0.2s;}
+.footer-links a:hover{color:var(--text);}
 
-    /* ── Printing Animation ── */
-    .printing-animation {
-      display: flex;
-      justify-content: center;
-      gap: 6px;
-      margin: 8px 0;
-    }
-    .print-bar {
-      width: 4px;
-      height: 20px;
-      background: var(--accent);
-      border-radius: 2px;
-      animation: print-wave 1.2s ease-in-out infinite;
-    }
-    .print-bar:nth-child(2) { animation-delay: 0.15s; background: var(--accent2); }
-    .print-bar:nth-child(3) { animation-delay: 0.3s; }
-    .print-bar:nth-child(4) { animation-delay: 0.45s; background: var(--accent2); }
-    .print-bar:nth-child(5) { animation-delay: 0.6s; }
-    @keyframes print-wave {
-      0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
-      50% { transform: scaleY(1); opacity: 1; }
-    }
+/* Scroll reveal */
+.reveal{opacity:0;transform:translateY(32px);transition:opacity 0.8s cubic-bezier(0.16,1,0.3,1),transform 0.8s cubic-bezier(0.16,1,0.3,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
 
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: rgba(20,20,35,0.95);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 13px 24px;
-      border-radius: 50px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 1000;
-      opacity: 0;
-      transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-    .toast.success { border-color: rgba(16,217,160,0.4); }
-    .toast.error { border-color: rgba(244,63,94,0.4); }
-
-    /* ── Confetti on Done ── */
-    .confetti-piece {
-      position: fixed;
-      width: 8px;
-      height: 8px;
-      border-radius: 2px;
-      pointer-events: none;
-      z-index: 999;
-      animation: confetti-fall 3s ease-in forwards;
-    }
-    @keyframes confetti-fall {
-      0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-    }
-
-    /* ── Back Button ── */
-    .back-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 14px;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer;
-      padding: 0;
-      transition: color 0.2s;
-    }
-    .back-btn:hover { color: var(--text); }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  </style>
+/* Mobile */
+@media(max-width:768px){
+  nav{padding:16px 24px;}
+  .nav-links{display:none;}
+  .stats{grid-template-columns:1fr;gap:1px;padding:40px 24px;}
+  .section{padding:80px 24px;}
+  .steps{grid-template-columns:1fr 1fr;padding:0;}
+  .features{grid-template-columns:1fr;padding:0 24px 80px;}
+  .price-cards{grid-template-columns:1fr;}
+  .cta-section,.pricing{padding:80px 24px;}
+  footer{padding:32px 24px;flex-direction:column;text-align:center;}
+  .footer-links{justify-content:center;}
+}
+</style>
 </head>
 <body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+<div class="grid-bg"></div>
 
-<canvas id="bg-canvas"></canvas>
-
-<!-- ═══════════════════════════════════════════ -->
-<!-- SCREEN 1: Upload                            -->
-<!-- ═══════════════════════════════════════════ -->
-<div class="screen active" id="screen-upload">
-  <div class="app-header">
-    <div class="logo">CampusCopy<span class="logo-dot"></span></div>
-    <div style="font-size:12px;color:var(--muted);">VIT Pune</div>
+<nav id="navbar">
+  <div class="nav-logo">CampusCopy</div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="app.html" class="nav-cta">Open App →</a>
   </div>
+</nav>
 
-  <div class="page-title">
-    <h1><span class="gradient-text">Print anything,</span><br>instantly.</h1>
-    <p>Upload · Pay · Collect. No queues.</p>
-  </div>
-
-  <!-- Upload Zone -->
-  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
-    <div class="upload-icon-wrap" id="upload-icon">📄</div>
-    <div class="upload-title" id="upload-title">Drop your PDF here</div>
-    <div class="upload-sub" id="upload-sub">or tap to browse files</div>
-    <div class="file-name" id="file-name"></div>
-    <div id="page-badge" style="display:none;justify-content:center;"></div>
-  </div>
-  <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="onFileSelect(this)" />
-
-  <div class="card">
-    <div class="field">
-      <label>Printer Location</label>
-      <select id="printer-select" onchange="updateCost()">
-        <option value="">Loading printers...</option>
-      </select>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+  <div class="hero-orb orb3"></div>
+  <div>
+    <div class="hero-badge">
+      <div class="badge-dot"></div>
+      Now live at VIT Pune
     </div>
-
-    <div class="field-row" style="margin-top:16px;">
-      <div class="field">
-        <label>Pages</label>
-        <input type="number" id="pages" min="1" value="" placeholder="Auto" oninput="updateCost()" />
-      </div>
-      <div class="field">
-        <label>Copies</label>
-        <input type="number" id="copies" min="1" value="1" oninput="updateCost()" />
-      </div>
+    <h1>
+      <span class="line1">PRINT</span>
+      <span class="line2">SMARTER</span>
+    </h1>
+    <p>Upload your PDF, pay in 10 seconds, collect your prints. No queues. No cash. No counters.</p>
+    <div class="hero-btns">
+      <a href="app.html" class="btn-main">Start Printing →</a>
+      <a href="#how" class="btn-sec">See How It Works</a>
     </div>
   </div>
-
-  <div class="card">
-    <div class="toggle-item">
-      <div>
-        <div class="toggle-label">🎨 Color Print</div>
-        <div class="toggle-price">₹5 per page</div>
-      </div>
-      <label class="switch">
-        <input type="checkbox" id="color" onchange="updateCost()" />
-        <span class="slider"></span>
-      </label>
-    </div>
-    <div class="toggle-item">
-      <div>
-        <div class="toggle-label">📋 Double Sided</div>
-        <div class="toggle-price">0.8× multiplier</div>
-      </div>
-      <label class="switch">
-        <input type="checkbox" id="double-sided" onchange="updateCost()" />
-        <span class="slider"></span>
-      </label>
-    </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
   </div>
+</section>
 
-  <div class="cost-display">
-    <div class="cost-amount" id="cost-display">₹0.00</div>
-    <div class="cost-label">Estimated Total</div>
-    <div class="cost-breakdown" id="cost-breakdown"></div>
-  </div>
-
-  <button class="btn btn-primary" id="upload-btn" onclick="uploadFile()" disabled>
-    Continue to Payment →
-  </button>
+<!-- STATS -->
+<div class="stats">
+  <div class="stat reveal"><div class="stat-val" data-target="2">0</div><div class="stat-label">Seconds to upload</div></div>
+  <div class="stat reveal"><div class="stat-val" data-target="1">0</div><div class="stat-label">Rupee per B&W page</div></div>
+  <div class="stat reveal"><div class="stat-val" data-target="0">0</div><div class="stat-label">Queuing required</div></div>
 </div>
 
-<!-- ═══════════════════════════════════════════ -->
-<!-- SCREEN 2: Payment                           -->
-<!-- ═══════════════════════════════════════════ -->
-<div class="screen" id="screen-payment">
-  <div class="app-header">
-    <button class="back-btn" onclick="showScreen('upload')">← Back</button>
-    <div class="logo">CampusCopy<span class="logo-dot"></span></div>
-  </div>
-
-  <div class="page-title">
-    <h1><span class="gradient-text">Confirm &</span><br>Pay.</h1>
-    <p>Review your print order before paying</p>
-  </div>
-
-  <div class="card">
-    <div class="file-info-row">
-      <div class="file-icon">📄</div>
-      <div class="file-meta">
-        <div class="file-meta-name" id="pay-filename">—</div>
-        <div class="file-meta-sub" id="pay-meta">—</div>
-      </div>
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="section-tag">Process</div>
+  <h2>FOUR<br>SIMPLE<br>STEPS</h2>
+  <div class="steps">
+    <div class="step reveal" data-num="01">
+      <span class="step-icon">📤</span>
+      <h3>Upload PDF</h3>
+      <p>Select your file. Pages are detected automatically — no manual counting.</p>
     </div>
-
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-val" id="pay-pages">—</div>
-        <div class="summary-key">Pages</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-val" id="pay-copies">—</div>
-        <div class="summary-key">Copies</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-val" id="pay-type">—</div>
-        <div class="summary-key">Type</div>
-      </div>
+    <div class="step reveal" data-num="02">
+      <span class="step-icon">⚙️</span>
+      <h3>Set Options</h3>
+      <p>Choose color or B&W, single or double-sided. Cost updates instantly.</p>
+    </div>
+    <div class="step reveal" data-num="03">
+      <span class="step-icon">💳</span>
+      <h3>Pay Online</h3>
+      <p>Secure Razorpay checkout. UPI, cards, wallets — all accepted.</p>
+    </div>
+    <div class="step reveal" data-num="04">
+      <span class="step-icon">📲</span>
+      <h3>Collect Print</h3>
+      <p>Show your QR code at the counter. Zero wait. Zero hassle.</p>
     </div>
   </div>
+</section>
 
-  <div class="cost-display">
-    <div class="cost-amount" id="pay-cost">₹0.00</div>
-    <div class="cost-label">Total Amount Due</div>
+<!-- FEATURES -->
+<div class="features" id="features">
+  <div class="feature reveal">
+    <div class="feature-accent"></div>
+    <div class="feature-icon">🔍</div>
+    <h3>Auto Page Detection</h3>
+    <p>PDF.js reads your document client-side. No manual page counting ever again.</p>
   </div>
-
-  <button class="btn btn-primary" id="pay-btn" onclick="startPayment()">
-    Pay Securely with Razorpay →
-  </button>
-  <button class="btn btn-ghost" onclick="showScreen('upload')">← Change Options</button>
+  <div class="feature reveal">
+    <div class="feature-accent"></div>
+    <div class="feature-icon">📡</div>
+    <h3>Live Status Updates</h3>
+    <p>Socket.IO pushes real-time status: queued → printing → done. Watch it happen.</p>
+  </div>
+  <div class="feature reveal">
+    <div class="feature-accent"></div>
+    <div class="feature-icon">📲</div>
+    <h3>QR Pickup Code</h3>
+    <p>Auto-generated QR code for contactless pickup verification at the counter.</p>
+  </div>
+  <div class="feature reveal">
+    <div class="feature-accent"></div>
+    <div class="feature-icon">💳</div>
+    <h3>Razorpay Payments</h3>
+    <p>UPI, cards, netbanking, wallets. Payments credited instantly to the shop.</p>
+  </div>
+  <div class="feature reveal">
+    <div class="feature-accent"></div>
+    <div class="feature-icon">📊</div>
+    <h3>Admin Analytics</h3>
+    <p>Revenue charts, job history, printer status — everything in one dashboard.</p>
+  </div>
+  <div class="feature reveal">
+    <div class="feature-accent"></div>
+    <div class="feature-icon">🖨️</div>
+    <h3>Auto Print Bridge</h3>
+    <p>Python bridge polls for paid jobs and sends them directly to the printer.</p>
+  </div>
 </div>
 
-<!-- ═══════════════════════════════════════════ -->
-<!-- SCREEN 3: Status                            -->
-<!-- ═══════════════════════════════════════════ -->
-<div class="screen" id="screen-status">
-  <div class="app-header">
-    <div class="logo">CampusCopy<span class="logo-dot"></span></div>
-    <div style="font-size:12px;color:var(--muted);" id="status-time">Just now</div>
-  </div>
-
-  <div class="page-title">
-    <h1><span class="gradient-text">Your print</span><br>is on its way.</h1>
-    <p>Real-time updates as it prints</p>
-  </div>
-
-  <div class="progress-track">
-    <div class="progress-line"><div class="progress-line-fill" id="progress-fill"></div></div>
-    <div class="progress-steps">
-      <div class="step">
-        <div class="step-dot" id="step-paid">1</div>
-        <div class="step-label">Paid</div>
-      </div>
-      <div class="step">
-        <div class="step-dot" id="step-queued">2</div>
-        <div class="step-label">Queued</div>
-      </div>
-      <div class="step">
-        <div class="step-dot" id="step-printing">3</div>
-        <div class="step-label">Printing</div>
-      </div>
-      <div class="step">
-        <div class="step-dot" id="step-done">4</div>
-        <div class="step-label">Done</div>
-      </div>
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-tag" style="justify-content:center">Pricing</div>
+  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,7vw,96px);line-height:0.9;">TRANSPARENT<br>PRICING</h2>
+  <div class="price-cards">
+    <div class="price-card reveal">
+      <div class="price-name">B&W Print</div>
+      <div class="price-tag">₹1</div>
+      <div class="price-unit">per page</div>
+      <div class="price-desc" style="margin-top:16px;">Standard black & white printing. Double-sided at 0.8× multiplier.</div>
+    </div>
+    <div class="price-card featured reveal">
+      <div class="price-name">Color Print</div>
+      <div class="price-tag">₹5</div>
+      <div class="price-unit">per page</div>
+      <div class="price-desc" style="margin-top:16px;">Vivid full-color printing. Double-sided at 0.8× multiplier.</div>
     </div>
   </div>
+</section>
 
-  <div class="status-card" id="status-card">
-    <div class="status-glow" id="status-glow"></div>
-    <span class="status-emoji" id="status-emoji">⏳</span>
-    <div class="status-title" id="status-title">Processing...</div>
-    <div class="status-sub" id="status-sub">Please wait a moment</div>
-    <div id="printing-anim" style="display:none;">
-      <div class="printing-animation">
-        <div class="print-bar"></div>
-        <div class="print-bar"></div>
-        <div class="print-bar"></div>
-        <div class="print-bar"></div>
-        <div class="print-bar"></div>
-      </div>
-    </div>
-    <span class="status-badge badge-pending" id="status-badge">pending</span>
+<!-- CTA -->
+<section class="cta-section">
+  <div class="section-tag" style="justify-content:center">Get Started</div>
+  <h2>READY<br>TO PRINT?</h2>
+  <p>Join hundreds of VIT Pune students who print smarter every day.</p>
+  <a href="app.html" class="btn-main" style="font-size:18px;padding:20px 48px;">Open CampusCopy →</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">CampusCopy</div>
+  <div class="footer-text">Vishwakarma Institute of Technology, Pune · Built by Atharva Vavhal</div>
+  <div class="footer-links">
+    <a href="app.html">App</a>
+    <a href="https://campuscopy.vercel.app">Admin</a>
+    <a href="https://github.com/AtharvaVavhal/Campuscopy">GitHub</a>
   </div>
+</footer>
 
-  <div id="qr-container" class="qr-container" style="display:none;">
-    <img id="qr-image" src="" alt="QR Code" />
-    <div class="qr-hint">📱 Show this QR at the counter to collect your print</div>
-  </div>
-
-  <button class="btn btn-ghost" onclick="showScreen('upload')" style="margin-top:16px;">
-    + New Print Job
-  </button>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 <script>
-const API = 'https://campuscopy-api.onrender.com';
-let currentJob = null;
-let socket = null;
-
-// ── Particle Background ──────────────────────────────
-const canvas = document.getElementById('bg-canvas');
-const ctx = canvas.getContext('2d');
-let particles = [];
-
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+// Cursor
+const cursor=document.getElementById('cursor');
+const ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cursor.style.left=mx+'px';cursor.style.top=my+'px';
+});
+function animRing(){
+  rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;
+  ring.style.left=rx+'px';ring.style.top=ry+'px';
+  requestAnimationFrame(animRing);
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-class Particle {
-  constructor() { this.reset(); }
-  reset() {
-    this.x = Math.random() * canvas.width;
-    this.y = Math.random() * canvas.height;
-    this.size = Math.random() * 1.5 + 0.3;
-    this.speedX = (Math.random() - 0.5) * 0.3;
-    this.speedY = (Math.random() - 0.5) * 0.3;
-    this.opacity = Math.random() * 0.4 + 0.05;
-    this.color = Math.random() > 0.5 ? '124,109,240' : '232,121,249';
-  }
-  update() {
-    this.x += this.speedX;
-    this.y += this.speedY;
-    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
-  }
-  draw() {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${this.color},${this.opacity})`;
-    ctx.fill();
-  }
-}
-
-for (let i = 0; i < 80; i++) particles.push(new Particle());
-
-function animateParticles() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  particles.forEach(p => { p.update(); p.draw(); });
-  requestAnimationFrame(animateParticles);
-}
-animateParticles();
-
-// ── Screen Navigation ────────────────────────────────
-function showScreen(name) {
-  const current = document.querySelector('.screen.active');
-  if (current) {
-    current.classList.add('exit');
-    setTimeout(() => {
-      current.classList.remove('active', 'exit');
-      current.style.display = 'none';
-    }, 300);
-  }
-  setTimeout(() => {
-    const next = document.getElementById('screen-' + name);
-    next.style.display = 'block';
-    requestAnimationFrame(() => next.classList.add('active'));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, 150);
-}
-
-// ── Toast ────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, type = '') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show ' + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-// ── Cost Calculator ──────────────────────────────────
-function updateCost() {
-  const pages = parseInt(document.getElementById('pages').value) || 0;
-  const copies = parseInt(document.getElementById('copies').value) || 1;
-  const color = document.getElementById('color').checked;
-  const ds = document.getElementById('double-sided').checked;
-  const price = color ? 5 : 1;
-  const mult = ds ? 0.8 : 1;
-  const cost = (pages * copies * price * mult).toFixed(2);
-
-  const el = document.getElementById('cost-display');
-  el.textContent = '₹' + cost;
-  el.classList.add('bump');
-  setTimeout(() => el.classList.remove('bump'), 300);
-
-  if (pages > 0) {
-    document.getElementById('cost-breakdown').textContent =
-      pages + ' pages × ' + copies + ' cop' + (copies > 1 ? 'ies' : 'y') +
-      ' × ₹' + price + (ds ? ' × 0.8' : '');
-  } else {
-    document.getElementById('cost-breakdown').textContent = '';
-  }
-
-  const hasFile = document.getElementById('file-input').files.length > 0;
-  const hasPrinter = document.getElementById('printer-select').value !== '';
-  document.getElementById('upload-btn').disabled = !(hasFile && hasPrinter && pages > 0);
-}
-
-// ── File Select ──────────────────────────────────────
-async function onFileSelect(input) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  const zone = document.getElementById('upload-zone');
-  const icon = document.getElementById('upload-icon');
-  const title = document.getElementById('upload-title');
-  const sub = document.getElementById('upload-sub');
-  const namEl = document.getElementById('file-name');
-  const badge = document.getElementById('page-badge');
-
-  icon.textContent = '⏳';
-  title.textContent = 'Reading your PDF...';
-  sub.textContent = 'Detecting page count';
-  namEl.textContent = file.name;
-  zone.classList.remove('has-file');
-
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const ab = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-    const count = pdf.numPages;
-    document.getElementById('pages').value = count;
-    document.getElementById('pages').style.borderColor = 'var(--success)';
-
-    icon.textContent = '✅';
-    title.textContent = 'PDF ready!';
-    sub.textContent = file.name;
-    zone.classList.add('has-file');
-
-    badge.style.display = 'flex';
-    badge.innerHTML = `<span class="page-badge">📄 ${count} page${count > 1 ? 's' : ''} detected</span>`;
-    showToast('✨ ' + count + ' pages detected automatically!', 'success');
-  } catch (e) {
-    icon.textContent = '✅';
-    title.textContent = file.name;
-    sub.textContent = 'Enter page count manually';
-    zone.classList.add('has-file');
-    showToast('Enter page count manually', '');
-  }
-  updateCost();
-}
-
-// ── Load Printers ────────────────────────────────────
-async function loadPrinters() {
-  try {
-    const res = await fetch(API + '/api/printers');
-    const data = await res.json();
-    const sel = document.getElementById('printer-select');
-    sel.innerHTML = '<option value="">Select a printer</option>';
-    data.printers.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = (p.is_online ? '🟢 ' : '⚫ ') + p.name + (p.location ? ' — ' + p.location : '');
-      sel.appendChild(opt);
-    });
-    sel.onchange = updateCost;
-  } catch {
-    document.getElementById('printer-select').innerHTML =
-      '<option value="5b4bedf3-3550-4faa-ac3d-d4f490772258">🟢 Main Printer — Ground Floor</option>';
-    updateCost();
-  }
-}
-
-// ── Upload ───────────────────────────────────────────
-async function uploadFile() {
-  const file = document.getElementById('file-input').files[0];
-  const printer_id = document.getElementById('printer-select').value;
-  const pages = document.getElementById('pages').value;
-  const copies = document.getElementById('copies').value;
-  const color = document.getElementById('color').checked;
-  const ds = document.getElementById('double-sided').checked;
-
-  const btn = document.getElementById('upload-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Uploading...';
-
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('printer_id', printer_id);
-    fd.append('pages', pages);
-    fd.append('copies', copies);
-    fd.append('color', color);
-    fd.append('double_sided', ds);
-
-    const res = await fetch(API + '/api/jobs/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Upload failed');
-    currentJob = data.job;
-
-    document.getElementById('pay-filename').textContent = currentJob.file_name;
-    document.getElementById('pay-meta').textContent = currentJob.pages + ' pages · ' + currentJob.copies + ' cop' + (currentJob.copies > 1 ? 'ies' : 'y');
-    document.getElementById('pay-pages').textContent = currentJob.pages;
-    document.getElementById('pay-copies').textContent = currentJob.copies;
-    document.getElementById('pay-type').textContent = (currentJob.color ? 'Color' : 'B&W') + (currentJob.double_sided ? '+2S' : '');
-    document.getElementById('pay-cost').textContent = '₹' + currentJob.cost;
-
-    showScreen('payment');
-  } catch (err) {
-    showToast('❌ ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = 'Continue to Payment →';
-    updateCost();
-  }
-}
-
-// ── Payment ──────────────────────────────────────────
-async function startPayment() {
-  const btn = document.getElementById('pay-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Creating order...';
-
-  try {
-    const res = await fetch(API + '/api/payments/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: currentJob.id }),
-    });
-    const order = await res.json();
-    if (!res.ok) throw new Error(order.error || 'Order failed');
-
-    const rzp = new Razorpay({
-      key: order.key_id,
-      amount: order.amount,
-      currency: order.currency,
-      order_id: order.order_id,
-      name: 'CampusCopy',
-      description: 'Print Job — ' + currentJob.file_name,
-      image: '',
-      handler: () => {
-        showToast('🎉 Payment successful!', 'success');
-        showStatusScreen();
-      },
-      prefill: { name: 'Student', email: '', contact: '' },
-      theme: { color: '#7c6df0' },
-      modal: {
-        ondismiss: () => {
-          btn.disabled = false;
-          btn.innerHTML = 'Pay Securely with Razorpay →';
-        }
-      }
-    });
-    rzp.open();
-  } catch (err) {
-    showToast('❌ ' + err.message, 'error');
-    btn.disabled = false;
-    btn.innerHTML = 'Pay Securely with Razorpay →';
-  }
-}
-
-// ── Status ───────────────────────────────────────────
-function showStatusScreen() {
-  showScreen('status');
-  connectSocket();
-  pollStatus();
-}
-
-const STATUS_CONFIG = {
-  pending:  { emoji: '⏳', title: 'Awaiting Payment', sub: 'Complete payment to proceed', glow: 'rgba(251,191,36,0.3)', progress: '0%' },
-  paid:     { emoji: '💰', title: 'Payment Confirmed!', sub: 'Your job is being queued', glow: 'rgba(16,217,160,0.3)', progress: '10%' },
-  queued:   { emoji: '📋', title: 'In Queue', sub: 'Waiting for the printer to be free', glow: 'rgba(6,182,212,0.3)', progress: '40%' },
-  printing: { emoji: '🖨️', title: 'Printing Now!', sub: 'Your document is being printed', glow: 'rgba(124,109,240,0.4)', progress: '70%' },
-  done:     { emoji: '✅', title: 'Ready for Pickup!', sub: 'Show QR code at the counter', glow: 'rgba(16,217,160,0.4)', progress: '100%' },
-  failed:   { emoji: '❌', title: 'Print Failed', sub: 'Please try again or contact staff', glow: 'rgba(244,63,94,0.3)', progress: '0%' },
-};
-
-function updateStatusUI(status) {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-  document.getElementById('status-emoji').textContent = cfg.emoji;
-  document.getElementById('status-title').textContent = cfg.title;
-  document.getElementById('status-sub').textContent = cfg.sub;
-  document.getElementById('status-glow').style.background =
-    `radial-gradient(circle, ${cfg.glow}, transparent 70%)`;
-  document.getElementById('progress-fill').style.width = cfg.progress;
-
-  const badge = document.getElementById('status-badge');
-  badge.textContent = status;
-  badge.className = 'status-badge badge-' + status;
-
-  document.getElementById('printing-anim').style.display = status === 'printing' ? 'block' : 'none';
-
-  const steps = ['paid', 'queued', 'printing', 'done'];
-  const idx = steps.indexOf(status);
-  steps.forEach((s, i) => {
-    const dot = document.getElementById('step-' + s);
-    if (i < idx) { dot.className = 'step-dot done'; dot.textContent = '✓'; }
-    else if (i === idx) { dot.className = 'step-dot active'; dot.textContent = i + 1; }
-    else { dot.className = 'step-dot'; dot.textContent = i + 1; }
+animRing();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{
+    cursor.style.transform='translate(-50%,-50%) scale(2.5)';
+    ring.style.transform='translate(-50%,-50%) scale(1.5)';
   });
-
-  if (status === 'done') {
-    if (currentJob?.qr_code) {
-      document.getElementById('qr-image').src = currentJob.qr_code;
-      document.getElementById('qr-container').style.display = 'block';
-    }
-    launchConfetti();
-    showToast('🎉 Your print is ready for pickup!', 'success');
-  }
-}
-
-async function pollStatus() {
-  if (!currentJob) return;
-  try {
-    const res = await fetch(API + '/api/jobs/' + currentJob.id);
-    const data = await res.json();
-    if (data.job) updateStatusUI(data.job.status);
-  } catch {}
-}
-
-function connectSocket() {
-  if (socket) socket.disconnect();
-  socket = io(API);
-  socket.emit('join_job', currentJob.id);
-  socket.on('job_status', (data) => updateStatusUI(data.status));
-}
-
-// ── Confetti ─────────────────────────────────────────
-function launchConfetti() {
-  const colors = ['#7c6df0','#e879f9','#06b6d4','#10d9a0','#fbbf24'];
-  for (let i = 0; i < 60; i++) {
-    setTimeout(() => {
-      const el = document.createElement('div');
-      el.className = 'confetti-piece';
-      el.style.cssText = `
-        left: ${Math.random() * 100}vw;
-        top: -10px;
-        background: ${colors[Math.floor(Math.random() * colors.length)]};
-        width: ${Math.random() * 8 + 4}px;
-        height: ${Math.random() * 8 + 4}px;
-        border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
-        animation-duration: ${Math.random() * 2 + 2}s;
-        animation-delay: ${Math.random() * 0.5}s;
-      `;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 4000);
-    }, i * 40);
-  }
-}
-
-// ── Drag & Drop ──────────────────────────────────────
-const zone = document.getElementById('upload-zone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => {
-  e.preventDefault();
-  zone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file?.type === 'application/pdf') {
-    const input = document.getElementById('file-input');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    onFileSelect(input);
-  } else {
-    showToast('⚠️ Only PDF files are allowed', 'error');
-  }
+  el.addEventListener('mouseleave',()=>{
+    cursor.style.transform='translate(-50%,-50%) scale(1)';
+    ring.style.transform='translate(-50%,-50%) scale(1)';
+  });
 });
 
-// ── Init ─────────────────────────────────────────────
-loadPrinters();
+// Nav scroll
+window.addEventListener('scroll',()=>{
+  document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>50);
+});
+
+// Scroll reveal
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+// Counter animation
+const counterObserver=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    const el=e.target.querySelector('.stat-val');
+    const target=parseInt(el.dataset.target);
+    let current=0;
+    const step=()=>{
+      current=Math.min(current+Math.ceil(target/30),target);
+      el.textContent=current;
+      if(current<target)requestAnimationFrame(step);
+    };
+    step();
+    counterObserver.unobserve(e.target);
+  });
+},{threshold:0.5});
+document.querySelectorAll('.stat').forEach(el=>counterObserver.observe(el));
 </script>
 </body>
 </html>

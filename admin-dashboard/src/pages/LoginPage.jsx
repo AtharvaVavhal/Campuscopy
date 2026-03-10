@@ -1,72 +1,141 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const navigate = useNavigate();
 
-  const login = async (e) => {
+  useEffect(() => {
+    // Load fonts
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+    setTimeout(() => setMounted(true), 50);
+  }, []);
+
+  async function handleLogin(e) {
     e.preventDefault();
-    setLoading(true);
+    setLoading(true); setError('');
     try {
       const res = await api.post('/api/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('admin', JSON.stringify(res.data.admin));
-      toast.success('Welcome back!');
-      navigate('/queue');
+      navigate('/jobs');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
-      <div style={{ background: 'white', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '400px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '40px', marginBottom: '8px' }}>📄</div>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#6366f1' }}>CampusCopy</h1>
-          <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>Admin Dashboard</p>
+    <div style={{
+      minHeight: '100vh', background: '#08080f',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Grid bg */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+        backgroundImage: 'linear-gradient(rgba(167,139,250,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,0.04) 1px,transparent 1px)',
+        backgroundSize: '60px 60px',
+      }}/>
+      {/* Orbs */}
+      <div style={{ position:'fixed',top:-100,left:-100,width:400,height:400,borderRadius:'50%',background:'rgba(167,139,250,0.08)',filter:'blur(80px)',zIndex:0,pointerEvents:'none' }}/>
+      <div style={{ position:'fixed',bottom:-50,right:-50,width:300,height:300,borderRadius:'50%',background:'rgba(52,211,153,0.06)',filter:'blur(80px)',zIndex:0,pointerEvents:'none' }}/>
+
+      <div style={{
+        position: 'relative', zIndex: 1, width: '100%', maxWidth: 400, padding: '0 24px',
+        opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(24px)',
+        transition: 'all 0.6s cubic-bezier(0.16,1,0.3,1)',
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{
+            fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, letterSpacing: 3,
+            background: 'linear-gradient(135deg,#a78bfa,#34d399)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>CampusCopy</div>
+          <div style={{ fontSize: 13, color: 'rgba(238,238,245,0.4)', marginTop: 4, fontWeight: 500 }}>
+            Admin Dashboard · VIT Pune
+          </div>
         </div>
 
-        <form onSubmit={login}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Email</label>
+        {/* Card */}
+        <div style={{
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 24, padding: 36,
+          backdropFilter: 'blur(20px)',
+        }}>
+          <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, letterSpacing: 0.5, marginBottom: 6 }}>
+            Sign In
+          </h2>
+          <p style={{ fontSize: 13, color: 'rgba(238,238,245,0.45)', marginBottom: 28 }}>
+            Enter your credentials to continue
+          </p>
+
+          {error && (
+            <div style={{
+              background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)',
+              borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f87171',
+              marginBottom: 20,
+            }}>{error}</div>
+          )}
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(238,238,245,0.45)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>Email</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="admin@example.com"
-              required
-              style={{ width: '100%', padding: '12px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', outline: 'none' }}
+              style={{
+                width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 11, padding: '12px 14px', fontSize: 14, color: '#eeeef5',
+                outline: 'none', fontFamily: 'inherit',
+                transition: 'border-color 0.25s',
+              }}
+              onFocus={e => e.target.style.borderColor='#a78bfa'}
+              onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
             />
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Password</label>
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(238,238,245,0.45)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>Password</label>
             <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
+              type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              required
-              style={{ width: '100%', padding: '12px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', outline: 'none' }}
+              style={{
+                width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 11, padding: '12px 14px', fontSize: 14, color: '#eeeef5',
+                outline: 'none', fontFamily: 'inherit',
+                transition: 'border-color 0.25s',
+              }}
+              onFocus={e => e.target.style.borderColor='#a78bfa'}
+              onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
+              onKeyDown={e => e.key === 'Enter' && handleLogin(e)}
             />
           </div>
 
           <button
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', padding: '14px', background: loading ? '#a5b4fc' : '#6366f1', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer' }}
+            onClick={handleLogin} disabled={loading}
+            style={{
+              width: '100%', padding: '14px', border: 'none', borderRadius: 12,
+              background: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+              color: 'white', fontSize: 14, fontFamily: "'Bebas Neue',sans-serif",
+              letterSpacing: 1.5, cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              boxShadow: '0 6px 24px rgba(167,139,250,0.3)',
+              transition: 'all 0.25s',
+            }}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'SIGNING IN…' : 'SIGN IN →'}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
