@@ -297,7 +297,7 @@ win32api.ShellExecute(0, "print", file_path, f'/d:"{PRINTER_NAME}"', ".", 0)
 
 **Atharva Vavhal**
 🎓 Vishwakarma Institute of Technology, Pune
-Built from scratch in a single session using Claude.
+Built from scratch.
 
 ---
 
