@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampusCopy</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+    .screen { display: none; min-height: 100vh; padding: 24px 20px; max-width: 480px; margin: 0 auto; }
+    .screen.active { display: block; }
+    h1 { font-size: 24px; font-weight: 700; color: #6366f1; margin-bottom: 4px; }
+    p.subtitle { color: #666; font-size: 14px; margin-bottom: 28px; }
+    .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+    input, select { width: 100%; padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 15px; outline: none; transition: border 0.2s; }
+    input:focus, select:focus { border-color: #6366f1; }
+    .upload-area { border: 2px dashed #c7d2fe; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 16px; }
+    .upload-area:hover { border-color: #6366f1; background: #f0f0ff; }
+    .upload-area.has-file { border-color: #10b981; background: #f0fdf4; }
+    .upload-icon { font-size: 40px; margin-bottom: 8px; }
+    .upload-text { font-size: 15px; color: #666; }
+    .upload-text strong { color: #6366f1; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { background: #a5b4fc; cursor: not-allowed; }
+    .btn-secondary { background: #f3f4f6; color: #374151; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 15px; color: #374151; }
+    .toggle-price { font-size: 13px; color: #6366f1; font-weight: 600; }
+    .switch { position: relative; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 24px; transition: 0.3s; }
+    .slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    input:checked + .slider { background: #6366f1; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .cost-box { background: #f0f0ff; border-radius: 12px; padding: 16px; text-align: center; margin: 16px 0; }
+    .cost-amount { font-size: 36px; font-weight: 800; color: #6366f1; }
+    .cost-label { font-size: 13px; color: #666; margin-top: 4px; }
+    .status-icon { font-size: 64px; text-align: center; margin: 32px 0 16px; }
+    .status-text { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+    .status-sub { font-size: 14px; color: #666; text-align: center; margin-bottom: 24px; }
+    .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-paid { background: #d1fae5; color: #059669; }
+    .badge-queued { background: #dbeafe; color: #2563eb; }
+    .badge-printing { background: #ede9fe; color: #7c3aed; }
+    .badge-done { background: #d1fae5; color: #059669; }
+    .badge-failed { background: #fee2e2; color: #dc2626; }
+    .qr-box { text-align: center; margin: 20px 0; }
+    .qr-box img { width: 160px; height: 160px; border-radius: 12px; border: 3px solid #e5e7eb; }
+    .progress-steps { display: flex; justify-content: space-between; margin: 24px 0; position: relative; }
+    .progress-steps::before { content: ''; position: absolute; top: 14px; left: 10%; right: 10%; height: 2px; background: #e5e7eb; z-index: 0; }
+    .step { display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 1; }
+    .step-dot { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .step-dot.done { background: #6366f1; color: white; }
+    .step-dot.active { background: #6366f1; color: white; box-shadow: 0 0 0 4px #c7d2fe; }
+    .step-label { font-size: 11px; color: #888; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 12px 24px; border-radius: 24px; font-size: 14px; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    .loader { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #scanner-view { width: 100%; border-radius: 12px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<!-- SCREEN 1: Upload -->
+<div class="screen active" id="screen-upload">
+  <h1>📄 CampusCopy</h1>
+  <p class="subtitle">Upload, pay & collect prints instantly</p>
+
+  <div class="card">
+    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">Tap to select a <strong>PDF file</strong></div>
+      <div id="file-name" style="margin-top:8px;font-size:13px;color:#6366f1;"></div>
+    </div>
+    <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="onFileSelect(this)" />
+
+    <label>Printer</label>
+    <select id="printer-select" style="margin-bottom:16px;">
+      <option value="">Loading printers...</option>
+    </select>
+
+    <label>Number of Pages</label>
+    <input type="number" id="pages" min="1" value="1" style="margin-bottom:16px;" oninput="updateCost()" />
+
+    <label>Copies</label>
+    <input type="number" id="copies" min="1" value="1" style="margin-bottom:16px;" oninput="updateCost()" />
+  </div>
+
+  <div class="card">
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Color Print</div>
+        <div class="toggle-price">₹5/page</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="color" onchange="updateCost()" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Double Sided</div>
+        <div class="toggle-price">0.8x multiplier</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="double-sided" onchange="updateCost()" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="cost-box">
+    <div class="cost-amount" id="cost-display">₹0.00</div>
+    <div class="cost-label">Estimated Cost</div>
+  </div>
+
+  <button class="btn btn-primary" id="upload-btn" onclick="uploadFile()" disabled>
+    Upload & Continue
+  </button>
+</div>
+
+<!-- SCREEN 2: Payment -->
+<div class="screen" id="screen-payment">
+  <h1>💳 Payment</h1>
+  <p class="subtitle">Complete payment to send to printer</p>
+
+  <div class="card">
+    <div style="margin-bottom:16px;">
+      <div style="font-size:13px;color:#666;margin-bottom:4px;">File</div>
+      <div style="font-size:15px;font-weight:600;" id="pay-filename">-</div>
+    </div>
+    <div style="display:flex;gap:24px;">
+      <div>
+        <div style="font-size:13px;color:#666;margin-bottom:4px;">Pages</div>
+        <div style="font-size:15px;font-weight:600;" id="pay-pages">-</div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:#666;margin-bottom:4px;">Copies</div>
+        <div style="font-size:15px;font-weight:600;" id="pay-copies">-</div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:#666;margin-bottom:4px;">Type</div>
+        <div style="font-size:15px;font-weight:600;" id="pay-type">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cost-box">
+    <div class="cost-amount" id="pay-cost">₹0.00</div>
+    <div class="cost-label">Total Amount</div>
+  </div>
+
+  <button class="btn btn-primary" id="pay-btn" onclick="startPayment()">
+    Pay Now
+  </button>
+  <button class="btn btn-secondary" onclick="showScreen('upload')" style="margin-top:8px;">
+    ← Back
+  </button>
+</div>
+
+<!-- SCREEN 3: Status -->
+<div class="screen" id="screen-status">
+  <h1>🖨️ Print Status</h1>
+  <p class="subtitle">Your job is being processed</p>
+
+  <div class="progress-steps">
+    <div class="step">
+      <div class="step-dot" id="step-paid">✓</div>
+      <div class="step-label">Paid</div>
+    </div>
+    <div class="step">
+      <div class="step-dot" id="step-queued">2</div>
+      <div class="step-label">Queued</div>
+    </div>
+    <div class="step">
+      <div class="step-dot" id="step-printing">3</div>
+      <div class="step-label">Printing</div>
+    </div>
+    <div class="step">
+      <div class="step-dot" id="step-done">4</div>
+      <div class="step-label">Done</div>
+    </div>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <div class="status-icon" id="status-icon">⏳</div>
+    <div class="status-text" id="status-text">Processing...</div>
+    <div class="status-sub" id="status-sub">Please wait</div>
+    <span class="status-badge" id="status-badge">pending</span>
+  </div>
+
+  <div class="qr-box" id="qr-box" style="display:none;">
+    <img id="qr-image" src="" alt="QR Code" />
+    <p style="font-size:13px;color:#666;margin-top:8px;">Show this QR at the counter to collect your print</p>
+  </div>
+
+  <button class="btn btn-secondary" onclick="showScreen('upload')" style="margin-top:8px;">
+    New Print Job
+  </button>
+</div>
+
+<!-- SCREEN 4: QR Scanner -->
+<div class="screen" id="screen-scanner">
+  <h1>📷 Scan QR</h1>
+  <p class="subtitle">Scan job QR code to verify pickup</p>
+  <video id="scanner-view" autoplay playsinline></video>
+  <canvas id="scanner-canvas" style="display:none;"></canvas>
+  <div id="scan-result" class="card" style="display:none;"></div>
+  <button class="btn btn-secondary" onclick="stopScanner(); showScreen('upload')">← Back</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
