@@ -1,306 +1,179 @@
-# 📄 CampusCopy
+# 🖨️ CampusCopy
 
-> **Automated print shop system for college students.**
-> Upload a PDF, pay online, and collect your prints — no queues, no cash, no hassle.
+> **A streamlined campus document printing and queue management platform.**
 
-[![Backend](https://img.shields.io/badge/API-Live-brightgreen)](https://campuscopy-api.onrender.com/health)
-[![PWA](https://img.shields.io/badge/Student%20PWA-Live-brightgreen)](https://campuscopy.pages.dev)
-[![Dashboard](https://img.shields.io/badge/Admin%20Dashboard-Live-brightgreen)](https://campuscopy.vercel.app)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
 
 ---
 
-## 🌐 Live URLs
+## 📖 Overview
 
-| Service | URL |
-|---|---|
-| 🔧 Backend API | https://campuscopy-api.onrender.com |
-| 📱 Student PWA | https://campuscopy.pages.dev |
-| 🖥️ Admin Dashboard | https://campuscopy.vercel.app |
+**CampusCopy** modernizes the campus printing experience. It provides a seamless digital platform where students can upload their documents, join a virtual print queue, and monitor their status in real time. For administrators, it offers a robust dashboard to manage printers, organize queues, and process jobs efficiently without the chaos of a crowded print shop.
+
+## 🚨 The Problem
+
+* **Long Wait Times:** Students waste valuable time standing in physical lines at campus print centers.
+* **Inefficient File Transfer:** Managing USB drives, emails, or Bluetooth transfers is slow and prone to errors or viruses.
+* **Chaotic Management:** Print shop administrators struggle to prioritize jobs, track payments, and communicate delays during peak hours.
+
+## 💡 The Solution
+
+CampusCopy completely digitizes the queueing process. Students can submit files from anywhere on campus via a mobile-friendly Progressive Web App (PWA) and track their position in line. Administrators receive a clean, organized queue of jobs on a React-powered dashboard, allowing for rapid processing and one-click status updates.
 
 ---
 
 ## ✨ Features
 
-### For Students
-- 📤 Upload PDF from phone or browser
-- 🔍 **Auto page detection** — no manual counting needed
-- 🎨 Choose B&W or Color, Single or Double-sided
-- 💳 Pay securely via Razorpay
-- 📡 **Live print status** updates via Socket.IO
-- 📲 QR code for pickup verification
-- 📱 Installable as Android PWA
+### 🎓 For Students
+* **Drag-and-Drop Uploads:** Easily upload PDFs, Word documents, and images.
+* **Live Queue Tracking:** See exactly how many people are ahead of you in real-time.
+* **No Installation Required:** Accessible via any browser as a lightweight PWA.
+* **Instant Notifications:** Get alerted when your print job is complete and ready for pickup.
 
-### For Shop Operators
-- 🖨️ Live job queue per printer
-- ✅ One-click status updates (Queued → Printing → Done)
-- 📊 Revenue & jobs analytics with charts
-- 🖥️ Printer online/offline status
-- 🔴 Real-time updates via Socket.IO
-
-### Print Bridge (Windows PC)
-- 🔄 Auto-polls for paid jobs every 10 seconds
-- 📥 Downloads PDF and sends to physical printer
-- 💓 Heartbeat every 30s to show printer Online status
-- 🪟 Runs as a Windows background service
+### 🛡️ For Administrators
+* **Centralized Dashboard:** View all incoming print requests in a unified Kanban-style or list view.
+* **Status Toggles:** Quickly move jobs from "Pending" to "Printing" to "Completed."
+* **Printer Management:** Monitor the health and availability of multiple campus printers.
+* **Asynchronous Processing:** Heavy file processing is handled seamlessly in the background.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Backend** | Node.js, Express.js, Socket.IO |
-| **Database** | PostgreSQL |
-| **Cache** | Redis (Upstash) |
-| **Payments** | Razorpay |
-| **Student App** | Vanilla HTML/CSS/JS (PWA) |
-| **Admin App** | React + Vite + TanStack Query + Recharts |
-| **Print Bridge** | Python 3 |
-| **Hosting** | Render (API) + Cloudflare Pages (PWA) + Vercel (Dashboard) |
+**Backend**
+* Node.js & Express
+* PostgreSQL (Database)
+* Redis via Upstash (Caching & Message Broker)
+* BullMQ (Background Job Queue)
+* Socket.io (Real-time WebSockets)
+
+**Frontend (Student Portal)**
+* HTML / CSS / Vanilla JavaScript
+* Progressive Web App (PWA) Capabilities
+
+**Admin Dashboard**
+* React.js
+* Vite
+
+**Deployment**
+* **Frontend:** Cloudflare Pages
+* **Admin Dashboard:** Vercel
+* **Backend:** Render
+* **Database/Cache:** Upstash Redis
 
 ---
 
-## 📁 Project Structure
+## 🏗️ Architecture
 
-```
-CampusCopy/
-├── backend/                  # Node.js API
-│   ├── config/
-│   │   ├── db.js             # PostgreSQL pool
-│   │   ├── redis.js          # Redis client
-│   │   └── schema.sql        # Database schema
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── jobController.js  # Upload + PDF page detection + QR
-│   │   └── paymentController.js
-│   ├── middleware/
-│   │   ├── auth.js           # JWT + API key auth
-│   │   ├── upload.js         # Multer PDF upload
-│   │   └── validate.js
-│   ├── models/
-│   │   ├── admin.js
-│   │   └── job.js
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── jobs.js
-│   │   ├── payments.js
-│   │   └── printers.js
-│   ├── utils/
-│   │   ├── razorpay.js
-│   │   └── socket.js
-│   └── server.js
-│
-├── frontend-pwa/             # Student mobile web app
-│   ├── index.html
-│   ├── app.js
-│   ├── manifest.json
-│   └── sw.js
-│
-├── admin-dashboard/          # React admin panel
-│   └── src/
-│       ├── pages/
-│       │   ├── LoginPage.jsx
-│       │   ├── JobQueuePage.jsx
-│       │   ├── AnalyticsPage.jsx
-│       │   └── PrintersPage.jsx
-│       ├── components/
-│       │   └── Layout.jsx
-│       └── api/
-│           └── client.js
-│
-└── print-bridge/             # Python print bridge
-    └── bridge.py
+The system utilizes an event-driven architecture to ensure real-time updates and prevent the server from crashing during high-volume file uploads.
+
+```text
++-------------------+        HTTP / WebSockets         +------------------+
+|   Student App     | -------------------------------> |                  |
+|  (PWA / HTML / JS)| <------------------------------- |                  |
++-------------------+      Real-time Status Updates    |   Node.js API    |
+                                                       |  (Express.js)    |
++-------------------+        HTTP / WebSockets         |                  |
+| Admin Dashboard   | -------------------------------> |                  |
+|  (React + Vite)   | <------------------------------- |                  |
++-------------------+      Real-time Queue Updates     +------------------+
+                                                          |    |    |
+          +-----------------------------------------------+    |    +-------+
+          |                                                    |            |
+  +----------------+                                   +---------------+  +-------+
+  |   PostgreSQL   |                                   | Redis Server  |  | BullMQ|
+  | (Users, Jobs,  |                                   |  (Upstash)    |--| Worker|
+  |  Printers)     |                                   |               |  |       |
+  +----------------+                                   +---------------+  +-------+
 ```
 
 ---
 
-## 🗄️ Database Schema
+## 📂 Project Structure
 
-```sql
-admins      -- Shop operators (login, JWT auth)
-printers    -- Physical printers (API key auth, heartbeat)
-jobs        -- Print requests (status: pending→paid→queued→printing→done)
-payments    -- Razorpay payment records
+```text
+campuscopy/
+├── apps/
+│   ├── student-pwa/       # Vanilla JS frontend for students
+│   ├── admin-dash/        # React + Vite dashboard for admins
+│   └── backend/           # Node.js + Express API
+├── packages/              # Shared types, UI components, or utilities
+├── .gitignore
+├── package.json
+└── README.md
 ```
 
 ---
 
-## 🚀 Local Setup
+## 🚀 Installation
 
 ### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+
-- Redis 7+
-- Python 3.9+
+* Node.js (v18+)
+* PostgreSQL running locally or via cloud
+* Redis running locally or via Upstash
 
-### 1. Clone the repo
-```bash
-git clone https://github.com/AtharvaVavhal/Campuscopy.git
-cd Campuscopy
-```
+### Setup Instructions
 
-### 2. Backend
-```bash
-cd backend
-npm install
-cp .env.example .env   # Fill in your credentials
-psql -U postgres -c "CREATE DATABASE campuscopy;"
-psql -U postgres -d campuscopy -f config/schema.sql
-npm run dev
-```
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/yourusername/CampusCopy.git](https://github.com/yourusername/CampusCopy.git)
+   cd CampusCopy
+   ```
 
-### 3. Student PWA
-```bash
-cd frontend-pwa
-npx serve .
-# → http://localhost:3000
-```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-### 4. Admin Dashboard
-```bash
-cd admin-dashboard
-npm install
-npm run dev
-# → http://localhost:5173
-```
+3. **Database Setup:**
+   Make sure PostgreSQL is running, then run migrations:
+   ```bash
+   npm run db:migrate
+   ```
 
-### 5. Print Bridge
-```bash
-cd print-bridge
-pip install requests schedule python-dotenv
-# Edit .env with PRINTER_ID and API_KEY
-python3 bridge.py
-```
+4. **Start the development servers:**
+   ```bash
+   # Starts the backend, student frontend, and admin dashboard concurrently
+   npm run dev
+   ```
 
 ---
 
-## ⚙️ Environment Variables
+## 🔐 Environment Variables
 
-### Backend `.env`
+Create a `.env` file in the `apps/backend` directory based on the following template:
+
 ```env
+# Server
 PORT=5000
 NODE_ENV=development
 
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=campuscopy
-DB_USER=postgres
-DB_PASSWORD=your_password
+# Database
+DATABASE_URL=postgres://user:password@localhost:5432/campuscopy
 
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# Redis (Upstash / Local)
+REDIS_URL=rediss://default:password@your-upstash-url:6379
 
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=7d
-
-RAZORPAY_KEY_ID=rzp_test_xxx
-RAZORPAY_KEY_SECRET=your_secret
-RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
-
-MULTER_DEST=./uploads
-MAX_FILE_SIZE_MB=20
-```
-
-### Print Bridge `.env`
-```env
-API_URL=https://campuscopy-api.onrender.com
-PRINTER_ID=your_printer_uuid
-API_KEY=your_printer_api_key
-PRINTER_NAME=Main Printer
+# Client URLs (for CORS)
+CLIENT_URL=http://localhost:3000
+ADMIN_URL=http://localhost:5173
 ```
 
 ---
 
-## 📡 API Endpoints
+## 🔮 Future Improvements
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/login` | — | Admin login |
-| GET | `/api/auth/me` | JWT | Get current admin |
-| POST | `/api/jobs/upload` | — | Upload PDF + auto page count |
-| GET | `/api/jobs/:id` | — | Get job status |
-| PATCH | `/api/jobs/:id/status` | JWT/API Key | Update job status |
-| GET | `/api/jobs/printer/:id` | JWT/API Key | List jobs for printer |
-| POST | `/api/payments/create-order` | — | Create Razorpay order |
-| POST | `/api/payments/webhook` | HMAC | Razorpay webhook |
-| GET | `/api/printers` | — | List all printers |
-| POST | `/api/printers/:id/heartbeat` | API Key | Bridge heartbeat |
-
----
-
-## 💰 Pricing Logic
-
-```
-B&W:    ₹1 per page
-Color:  ₹5 per page
-Double-sided: 0.8× multiplier
-
-Cost = pages × copies × price_per_page × multiplier
-```
-
----
-
-## 🔒 Security
-
-- JWT authentication for admin dashboard
-- API key authentication for print bridge
-- Razorpay HMAC webhook signature verification
-- Rate limiting (100 req/15min global, 10 req/15min for login)
-- Helmet.js security headers
-- PDF-only file filter (MIME type check)
-- CORS restricted to known frontend origins
-- Registration disabled in production
-
----
-
-## 🖨️ Print Bridge (Windows Deployment)
-
-On the Windows PC connected to the printer:
-
-```bash
-pip install requests pywin32 schedule python-dotenv
-python bridge.py
-```
-
-To run as a Windows service on startup, use [NSSM](https://nssm.cc):
-```bash
-nssm install CampusCopyBridge python bridge.py
-nssm start CampusCopyBridge
-```
-
-For actual printing, uncomment the `win32api` lines in `bridge.py`:
-```python
-import win32api
-win32api.ShellExecute(0, "print", file_path, f'/d:"{PRINTER_NAME}"', ".", 0)
-```
-
----
-
-## 📊 Full Flow
-
-```
-1. Student visits campuscopy.pages.dev
-2. Selects PDF → pages auto-detected
-3. Chooses options → cost shown instantly
-4. Clicks Upload & Continue
-5. Payment screen → clicks Pay Now
-6. Razorpay checkout → payment complete
-7. Print bridge polls every 10s → picks up job
-8. Status: paid → queued → printing → done
-9. Student sees live updates on phone
-10. QR code shown → student collects print
-```
-
----
-
-## 👨‍💻 Built By
-
-**Atharva Vavhal**
-🎓 Vishwakarma Institute of Technology, Pune
-Built from scratch.
+- [ ] **Payment Gateway Integration:** Direct support for Stripe or campus card payments.
+- [ ] **Advanced Print Settings:** Options for double-sided, color vs. black-and-white, and stapling.
+- [ ] **Cloud Storage Sync:** Import files directly from Google Drive or OneDrive.
+- [ ] **Analytics Dashboard:** Insights into peak printing hours, paper usage, and revenue.
 
 ---
 
 ## 📄 License
 
-MIT License — free to use, modify and deploy.
+This project is licensed under the [MIT License](LICENSE).
