@@ -11,37 +11,31 @@ const { Server } = require("socket.io");
 const app = express();
 const httpServer = http.createServer(app);
 
+const ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://campuscopy.pages.dev",
+  "https://campuscopy.vercel.app",
+];
+
 const io = new Server(httpServer, {
-  cors: {
-    origin: [
-      process.env.STUDENT_PWA_URL || "http://localhost:3000",
-      process.env.ADMIN_DASHBOARD_URL || "http://localhost:5173", "http://localhost:5174",
-    ],
-    methods: ["GET", "POST"],
-  },
+  cors: { origin: ALLOWED_ORIGINS, methods: ["GET", "POST"] },
 });
 
 app.set("io", io);
 
 io.on("connection", (socket) => {
-  console.log(`🔌 Socket connected: ${socket.id}`);
-
-  socket.on("join_job", (jobId) => socket.join(`job:${jobId}`));
-  socket.on("join_printer", (printerId) => socket.join(`printer:${printerId}`));
-  socket.on("disconnect", () => console.log(`🔌 Socket disconnected: ${socket.id}`));
+  console.log("Socket connected: " + socket.id);
+  socket.on("join_job", (jobId) => socket.join("job:" + jobId));
+  socket.on("join_printer", (printerId) => socket.join("printer:" + printerId));
+  socket.on("disconnect", () => console.log("Socket disconnected: " + socket.id));
 });
 
 app.use(helmet());
 app.use(compression());
 app.use(morgan("dev"));
-app.use(cors({
-  origin: [
-    process.env.STUDENT_PWA_URL || "http://localhost:3000",
-    process.env.ADMIN_DASHBOARD_URL || "http://localhost:5173", "http://localhost:5174",
-  ],
-  credentials: true,
-}));
-
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -75,5 +69,5 @@ require("./config/redis");
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
-  console.log(`🚀 CampusCopy API running on port ${PORT}`);
+  console.log("CampusCopy API running on port " + PORT);
 });
