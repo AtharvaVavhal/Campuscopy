@@ -26,7 +26,6 @@ const upload = multer({
   storage,
   limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE_MB) || 20) * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    // Only allow PDFs (frontend enforces this too, but double-check server-side)
     if (file.mimetype === "application/pdf") return cb(null, true);
     cb(new Error("Only PDF files are allowed"));
   },
@@ -50,29 +49,24 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!req.file)   return res.status(400).json({ error: "No file uploaded" });
     if (!printer_id) return res.status(400).json({ error: "No printer selected" });
 
-    // Convert string → boolean
     const isColor       = color        === "true" || color        === true;
     const isDoubleSided = double_sided === "true" || double_sided === true;
     const isPriority    = priority     === "true" || priority     === true;
 
-    // Page range
     const pageFrom = page_from ? parseInt(page_from) : null;
     const pageTo   = page_to   ? parseInt(page_to)   : null;
 
-    // Cost
     const pricePerPage = isColor ? 5 : 1;
     const multiplier   = isDoubleSided ? 0.8 : 1;
     const priorityFee  = isPriority ? 5 : 0;
     const cost = (parseInt(pages) * parseInt(copies) * pricePerPage * multiplier + priorityFee).toFixed(2);
 
-    // Look up college_id from printer (your multi-college architecture)
     const printerRow = await db.query(
       "SELECT college_id FROM printers WHERE id = $1",
       [printer_id]
     );
     const college_id = printerRow.rows[0]?.college_id || null;
 
-    // Generate QR token for counter pickup verification
     const qr_token = uuidv4();
     const qr_code  = await QRCode.toDataURL(JSON.stringify({ qr_token }));
 
@@ -85,26 +79,24 @@ router.post("/upload", upload.single("file"), async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'pending',$14,$15,$16,NOW(),NOW())
        RETURNING *`,
       [
-        jobId,
-        college_id,
-        printer_id,
-        req.file.originalname,
-        req.file.path,
-        parseInt(pages),
-        parseInt(copies),
-        isColor,
-        isDoubleSided,
-        cost,
-        isPriority,
-        pageFrom,
-        pageTo,
-        phone.trim() || null,
-        qr_token,
-        qr_code,
+        jobId, college_id, printer_id,
+        req.file.originalname, req.file.path,
+        parseInt(pages), parseInt(copies),
+        isColor, isDoubleSided, cost, isPriority,
+        pageFrom, pageTo,
+        phone.trim() || null, qr_token, qr_code,
       ]
     );
 
-    res.status(201).json({ job: result.rows[0] });
+    const job = result.rows[0];
+
+    // ✅ Notify admin dashboard of new job instantly
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("queue_update", { jobId: job.id, status: "pending" });
+    }
+
+    res.status(201).json({ job });
 
   } catch (err) {
     console.error("Job creation error:", err);
@@ -224,7 +216,7 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
 
     const job = result.rows[0];
 
-    // Socket — instant update to student browser
+    // Socket — instant update to student browser and admin dashboard
     const io = req.app.get("io");
     if (io) {
       io.to(`job:${job.id}`).emit("job_update", {
@@ -240,7 +232,7 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
     // WhatsApp notification (async — never blocks response)
     if (job.phone_number) notifyJobStatus(job, status);
 
-    // Push notification — fires for printing/done/failed even if app is closed
+    // Push notification
     const pushPayload = buildPayload(job, status);
     if (pushPayload) {
       db.query('SELECT * FROM push_subscriptions WHERE job_id = $1', [job.id])
