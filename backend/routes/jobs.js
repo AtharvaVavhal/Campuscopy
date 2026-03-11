@@ -26,7 +26,6 @@ const upload = multer({
 });
 
 // ─── POST /api/jobs/upload ────────────────────────────────────────────────────
-// ─── POST /api/jobs/upload ────────────────────────────────────────────────────
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     const {
@@ -36,7 +35,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       color = false,
       double_sided = false,
       phone = "",
-      priority = false
+      priority = false,
+      page_from = null,
+      page_to = null,
     } = req.body;
 
     if (!req.file)   return res.status(400).json({ error: "No file uploaded" });
@@ -46,6 +47,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const isColor = color === "true" || color === true;
     const isDoubleSided = double_sided === "true" || double_sided === true;
     const isPriority = priority === "true" || priority === true;
+
+    // page range
+    const pageFrom = page_from ? parseInt(page_from) : null;
+    const pageTo   = page_to   ? parseInt(page_to)   : null;
 
     const pricePerPage = isColor ? 5 : 1;
     const multiplier   = isDoubleSided ? 0.8 : 1;
@@ -63,8 +68,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const result = await db.query(
       `INSERT INTO jobs
-       (id, college_id, printer_id, file_name, pages, copies, color, double_sided, cost, priority, status, phone_number, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11,NOW(),NOW())
+       (id, college_id, printer_id, file_name, pages, copies, color, double_sided, cost, priority, page_from, page_to, status, phone_number, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending',$13,NOW(),NOW())
        RETURNING *`,
       [
         jobId,
@@ -77,6 +82,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         isDoubleSided,
         cost,
         isPriority,
+        pageFrom,
+        pageTo,
         phone.trim() || null,
       ]
     );
@@ -132,7 +139,7 @@ router.get("/", authMiddleware, async (req, res) => {
        FROM jobs j
        LEFT JOIN printers p ON p.id = j.printer_id
        ORDER BY j.priority DESC, j.created_at ASC
- LIMIT 100`
+       LIMIT 100`
     );
     res.json({ jobs: result.rows });
   } catch (err) {
@@ -175,7 +182,6 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
     console.error("Status update error:", err);
     res.status(500).json({ error: "Failed to update status" });
   }
-  
 });
 
 module.exports = router;

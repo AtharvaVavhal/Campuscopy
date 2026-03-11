@@ -12,101 +12,65 @@
   --ink:#08080f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.09);
   --border:rgba(255,255,255,0.08);--violet:#a78bfa;--emerald:#34d399;
   --coral:#fb923c;--text:#eeeef5;--muted:rgba(238,238,245,0.45);
-  --success:#34d399;--danger:#f87171;--warning:#fbbf24;
+  --danger:#f87171;--warning:#fbbf24;--gold:#f59e0b;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;overflow-x:hidden;}
-
-/* Grain */
-body::before{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  opacity:0.5;
-}
-
-/* Orb BG */
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:0.5;}
 .bg-orb{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none;z-index:0;}
 .orb-a{width:400px;height:400px;background:rgba(167,139,250,0.1);top:-100px;right:-100px;}
 .orb-b{width:300px;height:300px;background:rgba(52,211,153,0.06);bottom:0;left:-80px;}
-
-/* Screens */
 .screen{display:none;position:relative;z-index:1;min-height:100vh;max-width:460px;margin:0 auto;padding-bottom:60px;opacity:0;transform:translateY(20px);transition:opacity 0.45s cubic-bezier(0.16,1,0.3,1),transform 0.45s cubic-bezier(0.16,1,0.3,1);}
 .screen.active{display:block;opacity:1;transform:translateY(0);}
 .screen.exit{opacity:0;transform:translateY(-16px);pointer-events:none;}
-
-/* Top bar */
 .topbar{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;background:linear-gradient(135deg,var(--violet),var(--emerald));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .live-pill{display:flex;align-items:center;gap:5px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--emerald);font-weight:600;}
 .live-dot{width:5px;height:5px;border-radius:50%;background:var(--emerald);animation:pulse-dot 1.5s ease-in-out infinite;}
 @keyframes pulse-dot{0%,100%{transform:scale(1);}50%{transform:scale(1.8);opacity:0.6;}}
-
-/* Page title */
 .ptitle{padding:28px 20px 0;}
 .ptitle h1{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:-0.5px;line-height:1.05;}
 .ptitle h1 span{background:linear-gradient(135deg,var(--violet),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .ptitle p{font-size:13px;color:var(--muted);margin-top:5px;}
-
-/* Card */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;margin:14px 20px 0;position:relative;overflow:hidden;transition:border-color 0.3s;}
 .card::before{content:'';position:absolute;inset:0;border-radius:18px;background:linear-gradient(135deg,rgba(167,139,250,0.04),transparent 60%);pointer-events:none;}
 .card:hover{border-color:rgba(167,139,250,0.2);}
-
-/* Upload zone */
-.upload-zone{
-  border:1.5px dashed rgba(167,139,250,0.25);border-radius:16px;
-  padding:36px 20px;text-align:center;cursor:pointer;
-  margin:14px 20px 0;position:relative;overflow:hidden;
-  background:rgba(167,139,250,0.03);
-  transition:all 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.upload-zone::after{
-  content:'';position:absolute;inset:0;border-radius:16px;
-  background:radial-gradient(circle at 50% 50%,rgba(167,139,250,0.12),transparent 65%);
-  opacity:0;transition:opacity 0.3s;
-}
+.upload-zone{border:1.5px dashed rgba(167,139,250,0.25);border-radius:16px;padding:36px 20px;text-align:center;cursor:pointer;margin:14px 20px 0;position:relative;overflow:hidden;background:rgba(167,139,250,0.03);transition:all 0.4s cubic-bezier(0.16,1,0.3,1);}
+.upload-zone::after{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(circle at 50% 50%,rgba(167,139,250,0.12),transparent 65%);opacity:0;transition:opacity 0.3s;}
 .upload-zone:hover::after,.upload-zone.drag-over::after{opacity:1;}
 .upload-zone:hover,.upload-zone.drag-over{border-color:var(--violet);transform:scale(1.01);}
 .upload-zone.has-file{border-style:solid;border-color:var(--emerald);background:rgba(52,211,153,0.04);}
 .upload-zone.has-file::after{background:radial-gradient(circle at 50% 50%,rgba(52,211,153,0.1),transparent 65%);opacity:1;}
-
-.uicon{
-  width:64px;height:64px;border-radius:18px;
-  background:var(--surface2);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:28px;margin:0 auto 14px;
-  transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);position:relative;z-index:1;
-}
+.uicon{width:64px;height:64px;border-radius:18px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);position:relative;z-index:1;}
 .upload-zone:hover .uicon{transform:translateY(-5px) scale(1.08);border-color:rgba(167,139,250,0.4);}
 .upload-zone.has-file .uicon{border-color:rgba(52,211,153,0.4);background:rgba(52,211,153,0.12);}
-
 .utitle{font-weight:700;font-size:15px;margin-bottom:5px;position:relative;z-index:1;}
 .usub{font-size:12px;color:var(--muted);position:relative;z-index:1;}
 .ufile{font-size:12px;color:var(--emerald);font-weight:600;margin-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 16px;position:relative;z-index:1;}
-.upages{
-  display:inline-flex;align-items:center;gap:5px;
-  background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);
-  border-radius:20px;padding:4px 12px;font-size:11px;color:var(--emerald);
-  font-weight:700;margin-top:9px;animation:pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  position:relative;z-index:1;
-}
+.upages{display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--emerald);font-weight:700;margin-top:9px;animation:pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);position:relative;z-index:1;}
 @keyframes pop-in{from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
-
-/* Fields */
+.preview-card{margin:14px 20px 0;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;animation:pop-in 0.4s cubic-bezier(0.16,1,0.3,1);}
+.preview-card:hover{border-color:rgba(167,139,250,0.2);}
+.preview-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+.preview-body{display:flex;align-items:flex-start;gap:14px;}
+.preview-canvas-wrap{flex-shrink:0;border-radius:10px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.5);border:1px solid var(--border);background:#fff;}
+#pdf-canvas{display:block;width:110px;height:auto;}
+.preview-meta{flex:1;min-width:0;}
+.preview-filename{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;}
+.preview-pageinfo{font-size:12px;color:var(--violet);font-weight:600;margin-bottom:12px;}
+.preview-nav{display:flex;gap:8px;}
+.prev-btn{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:7px 14px;color:var(--violet);font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;}
+.prev-btn:hover:not(:disabled){background:rgba(167,139,250,0.22);border-color:rgba(167,139,250,0.45);}
+.prev-btn:disabled{opacity:0.3;cursor:not-allowed;}
 .field{margin-top:14px;}
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
-.field input,.field select{
-  width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);
-  border-radius:11px;padding:12px 14px;font-size:14px;
-  font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);outline:none;
-  transition:border-color 0.25s,box-shadow 0.25s;-webkit-appearance:none;
-}
+.field input,.field select{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:11px;padding:12px 14px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);outline:none;transition:border-color 0.25s,box-shadow 0.25s;-webkit-appearance:none;}
 .field input:focus,.field select:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(167,139,250,0.12);}
 .field select option{background:#1a1a2e;}
 .field.auto-fill input{border-color:rgba(52,211,153,0.5);background:rgba(52,211,153,0.05);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-
-/* Toggles */
+.field-hint{font-size:11px;color:var(--muted);margin-top:5px;}
+.field-hint em{color:var(--emerald);font-style:normal;}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);}
 .toggle-row:last-child{border-bottom:none;padding-bottom:0;}
 .tlabel{font-size:14px;font-weight:600;}
@@ -117,44 +81,23 @@ body::before{
 .slider:before{content:'';position:absolute;width:17px;height:17px;left:3px;bottom:3px;background:var(--muted);border-radius:50%;transition:0.3s cubic-bezier(0.34,1.56,0.64,1);}
 input:checked+.slider{background:linear-gradient(135deg,var(--violet),#7c3aed);border-color:transparent;}
 input:checked+.slider:before{transform:translateX(21px);background:white;}
+/* Priority toggle special style */
+.priority-row input:checked+.slider{background:linear-gradient(135deg,var(--gold),#d97706);}
+.priority-row .tprice{color:var(--gold);}
 
-/* Cost */
-.cost-box{
-  margin:14px 20px 0;padding:22px;border-radius:18px;text-align:center;
-  background:linear-gradient(135deg,rgba(167,139,250,0.1),rgba(251,146,60,0.06));
-  border:1px solid rgba(167,139,250,0.18);position:relative;overflow:hidden;
-}
-.cost-box::before{
-  content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;
-  border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,0.15),transparent 70%);
-}
-.cost-num{
-  font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:-1px;
-  background:linear-gradient(135deg,var(--text),var(--coral));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);position:relative;z-index:1;
-}
+.cost-box{margin:14px 20px 0;padding:22px;border-radius:18px;text-align:center;background:linear-gradient(135deg,rgba(167,139,250,0.1),rgba(251,146,60,0.06));border:1px solid rgba(167,139,250,0.18);position:relative;overflow:hidden;}
+.cost-box::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,0.15),transparent 70%);}
+.cost-num{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:-1px;background:linear-gradient(135deg,var(--text),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);position:relative;z-index:1;}
 .cost-num.bump{transform:scale(1.1);}
 .cost-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;position:relative;z-index:1;}
 .cost-break{font-size:12px;color:rgba(167,139,250,0.7);margin-top:6px;position:relative;z-index:1;}
-
-/* Button */
-.btn{
-  display:block;width:calc(100% - 40px);margin:14px 20px 0;
-  padding:15px;border:none;border-radius:13px;
-  font-size:15px;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;
-  cursor:pointer;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  position:relative;overflow:hidden;
-}
+.btn{display:block;width:calc(100% - 40px);margin:14px 20px 0;padding:15px;border:none;border-radius:13px;font-size:15px;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;cursor:pointer;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);position:relative;overflow:hidden;}
 .btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%);}
 .btn-primary{background:linear-gradient(135deg,var(--violet),#7c3aed);color:white;box-shadow:0 6px 28px rgba(167,139,250,0.3);}
 .btn-primary:hover:not(:disabled){transform:translateY(-2px) scale(1.01);box-shadow:0 10px 36px rgba(167,139,250,0.45);}
-.btn-primary:active:not(:disabled){transform:scale(0.99);}
 .btn-primary:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;}
 .btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--muted);}
 .btn-ghost:hover{border-color:rgba(167,139,250,0.35);color:var(--text);}
-
-/* Payment screen */
 .order-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;}
 .os-item{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
 .os-val{font-family:'Bebas Neue',sans-serif;font-size:22px;}
@@ -164,8 +107,6 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
 .fmeta{flex:1;overflow:hidden;}
 .fname{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fsub{font-size:11px;color:var(--muted);margin-top:2px;}
-
-/* Progress steps */
 .progress-wrap{margin:20px 20px 0;}
 .p-line{height:2px;background:var(--border);border-radius:2px;margin:0 18px;position:relative;}
 .p-line-fill{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,var(--violet),var(--emerald));border-radius:2px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);width:0;}
@@ -175,8 +116,6 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
 .p-dot.active{background:linear-gradient(135deg,var(--violet),#7c3aed);border-color:transparent;color:white;box-shadow:0 0 20px rgba(167,139,250,0.5);transform:scale(1.15);}
 .p-dot.done{background:linear-gradient(135deg,var(--emerald),#059669);border-color:transparent;color:white;box-shadow:0 0 16px rgba(52,211,153,0.4);}
 .p-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
-
-/* Status card */
 .status-card{margin:16px 20px 0;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:32px 20px;text-align:center;position:relative;overflow:hidden;}
 .sglow{position:absolute;top:-50px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;pointer-events:none;transition:all 0.8s;}
 .semoji{font-size:60px;display:block;animation:float 3s ease-in-out infinite;position:relative;z-index:1;}
@@ -190,46 +129,31 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
 .b-printing{background:rgba(167,139,250,0.12);color:var(--violet);border:1px solid rgba(167,139,250,0.25);}
 .b-done{background:rgba(52,211,153,0.12);color:var(--emerald);border:1px solid rgba(52,211,153,0.25);}
 .b-failed{background:rgba(248,113,113,0.12);color:var(--danger);border:1px solid rgba(248,113,113,0.25);}
-
-/* Print wave */
 .wave{display:flex;justify-content:center;gap:4px;margin:10px 0;}
 .wbar{width:3px;height:18px;background:var(--violet);border-radius:2px;animation:wave-anim 1.2s ease-in-out infinite;}
-.wbar:nth-child(2){animation-delay:.12s;background:var(--emerald);}
-.wbar:nth-child(3){animation-delay:.24s;}
-.wbar:nth-child(4){animation-delay:.36s;background:var(--emerald);}
-.wbar:nth-child(5){animation-delay:.48s;}
+.wbar:nth-child(2){animation-delay:.12s;background:var(--emerald);}.wbar:nth-child(3){animation-delay:.24s;}.wbar:nth-child(4){animation-delay:.36s;background:var(--emerald);}.wbar:nth-child(5){animation-delay:.48s;}
 @keyframes wave-anim{0%,100%{transform:scaleY(0.35);opacity:0.4;}50%{transform:scaleY(1);opacity:1;}}
-
-/* QR */
 .qr-box{margin:14px 20px 0;background:white;border-radius:18px;padding:24px;text-align:center;animation:pop-in 0.5s ease;}
 .qr-box img{width:170px;height:170px;border-radius:8px;}
 .qr-hint{font-size:12px;color:#555;font-weight:600;margin-top:12px;}
-
-/* Toast */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(15,15,25,0.96);backdrop-filter:blur(20px);border:1px solid var(--border);color:var(--text);padding:11px 22px;border-radius:50px;font-size:13px;font-weight:600;z-index:1000;opacity:0;transition:all 0.4s cubic-bezier(0.16,1,0.3,1);white-space:nowrap;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.toast.ok{border-color:rgba(52,211,153,0.4);}
-.toast.err{border-color:rgba(248,113,113,0.4);}
-
-/* Confetti */
+.toast.ok{border-color:rgba(52,211,153,0.4);}.toast.err{border-color:rgba(248,113,113,0.4);}
 .cpcs{position:fixed;width:7px;height:7px;border-radius:2px;pointer-events:none;z-index:999;animation:cfall 3s ease-in forwards;}
 @keyframes cfall{0%{transform:translateY(-10px) rotate(0);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
-
-/* Spinner */
 .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.25);border-top-color:white;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:7px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-
 .back-btn{background:none;border:none;color:var(--muted);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:color 0.2s;padding:0;}
 .back-btn:hover{color:var(--text);}
+/* Priority badge in status screen */
+.priority-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--gold);margin-top:10px;position:relative;z-index:1;}
 </style>
 </head>
 <body>
 <div class="bg-orb orb-a"></div>
 <div class="bg-orb orb-b"></div>
 
-<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<!-- SCREEN 1: UPLOAD                              -->
-<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<!-- SCREEN 1: UPLOAD -->
 <div class="screen active" id="screen-upload">
   <div class="topbar">
     <div class="logo">CampusCopy</div>
@@ -243,11 +167,30 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
   <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
     <div class="uicon" id="uicon">📄</div>
     <div class="utitle" id="utitle">Tap to select PDF</div>
-    <div class="usub" id="usub">or drag & drop here</div>
+    <div class="usub" id="usub">or drag &amp; drop here</div>
     <div class="ufile" id="ufile"></div>
     <div id="upages"></div>
   </div>
   <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="onFileSelect(this)"/>
+
+  <div id="pdf-preview-wrap" style="display:none;">
+    <div class="preview-card">
+      <div class="preview-label">📄 PDF Preview</div>
+      <div class="preview-body">
+        <div class="preview-canvas-wrap">
+          <canvas id="pdf-canvas"></canvas>
+        </div>
+        <div class="preview-meta">
+          <div class="preview-filename" id="preview-filename">—</div>
+          <div class="preview-pageinfo" id="preview-pageinfo">Page 1 of 1</div>
+          <div class="preview-nav">
+            <button class="prev-btn" id="btn-prev" onclick="previewPage(-1)" disabled>← Prev</button>
+            <button class="prev-btn" id="btn-next" onclick="previewPage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="card">
     <div class="field">
@@ -256,15 +199,37 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
         <option value="">Loading printers…</option>
       </select>
     </div>
+    <div class="field" style="margin-top:14px;">
+      <label>WhatsApp Number <span style="color:var(--emerald);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">— get notified when ready</span></label>
+      <input type="tel" id="phone" placeholder="+91 98765 43210"/>
+      <div class="field-hint">Optional · <em>We'll WhatsApp you when your print is done</em></div>
+    </div>
     <div class="row2" style="margin-top:12px;">
-      <div class="field" id="pages-field">
-        <label>Pages</label>
-        <input type="number" id="pages" min="1" placeholder="Auto" oninput="updateCost()"/>
-      </div>
       <div class="field">
         <label>Copies</label>
         <input type="number" id="copies" min="1" value="1" oninput="updateCost()"/>
       </div>
+      <div class="field" id="pages-field">
+        <label>Total Pages</label>
+        <input type="number" id="pages" min="1" placeholder="Auto" oninput="updateCost()" readonly style="opacity:0.6;cursor:not-allowed;"/>
+      </div>
+    </div>
+    <!-- Page Range — shown after PDF detected -->
+    <div id="page-range-wrap" style="display:none;margin-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        📑 Print Range <span style="color:var(--violet);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">— optional, leave blank to print all</span>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-top:0;">
+          <label>From Page</label>
+          <input type="number" id="page-from" min="1" placeholder="1" oninput="updateCost()"/>
+        </div>
+        <div class="field" style="margin-top:0;">
+          <label>To Page</label>
+          <input type="number" id="page-to" min="1" placeholder="Last" oninput="updateCost()"/>
+        </div>
+      </div>
+      <div id="range-hint" style="font-size:11px;color:var(--violet);margin-top:6px;"></div>
     </div>
   </div>
 
@@ -277,6 +242,14 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
       <div><div class="tlabel">📋 Double Sided</div><div class="tprice">0.8× multiplier</div></div>
       <label class="switch"><input type="checkbox" id="ds" onchange="updateCost()"/><span class="slider"></span></label>
     </div>
+    <!-- ⚡ PRIORITY QUEUE TOGGLE -->
+    <div class="toggle-row priority-row">
+      <div>
+        <div class="tlabel">⚡ Priority Print</div>
+        <div class="tprice">+₹5 · Jump the queue</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="priority" onchange="updateCost()"/><span class="slider"></span></label>
+    </div>
   </div>
 
   <div class="cost-box">
@@ -288,9 +261,7 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
   <button class="btn btn-primary" id="upload-btn" onclick="doUpload()" disabled>CONTINUE TO PAYMENT →</button>
 </div>
 
-<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<!-- SCREEN 2: PAYMENT                             -->
-<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<!-- SCREEN 2: PAYMENT -->
 <div class="screen" id="screen-payment">
   <div class="topbar">
     <button class="back-btn" onclick="goScreen('upload')">← Back</button>
@@ -313,8 +284,36 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
       <div class="os-item"><div class="os-val" id="p-copies">—</div><div class="os-key">Copies</div></div>
       <div class="os-item"><div class="os-val" id="p-type">—</div><div class="os-key">Type</div></div>
     </div>
+    <div id="p-range-row" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:10px;font-size:12px;color:var(--violet);font-weight:600;">
+      📑 Printing pages <span id="p-range-text">—</span>
+    </div>
+    <!-- Priority badge in payment screen -->
+    <div id="p-priority-badge" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;display:none;align-items:center;gap:8px;">
+      <span style="font-size:16px;">⚡</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--gold);">Priority Print</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Your job will jump to the front of the queue</div>
+      </div>
+    </div>
   </div>
+
+  <!-- Coupon -->
+  <div class="card" style="margin-top:0;padding:14px 16px;">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="coupon-input" placeholder="Have a coupon code?"
+        style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;"
+        oninput="clearCoupon()" onkeydown="if(event.key==='Enter')applyCoupon()"/>
+      <button onclick="applyCoupon()" id="coupon-btn"
+        style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:10px;padding:10px 16px;color:var(--violet);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+        APPLY
+      </button>
+    </div>
+    <div id="coupon-msg" style="font-size:12px;margin-top:8px;display:none;padding:0 2px;"></div>
+  </div>
+
   <div class="cost-box">
+    <div style="display:none;font-size:13px;color:var(--muted);text-decoration:line-through;margin-bottom:2px;" id="p-original-cost"></div>
+    <div style="display:none;font-size:13px;color:var(--emerald);font-weight:600;margin-bottom:4px;" id="p-discount-line"></div>
     <div class="cost-num" id="p-cost">₹0</div>
     <div class="cost-lbl">Total Amount Due</div>
   </div>
@@ -322,9 +321,7 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
   <button class="btn btn-ghost" onclick="goScreen('upload')">← CHANGE OPTIONS</button>
 </div>
 
-<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<!-- SCREEN 3: STATUS                              -->
-<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<!-- SCREEN 3: STATUS -->
 <div class="screen" id="screen-status">
   <div class="topbar">
     <div class="logo">CampusCopy</div>
@@ -334,7 +331,6 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
     <h1>Your print <span>is live.</span></h1>
     <p>Real-time tracking below</p>
   </div>
-
   <div class="progress-wrap">
     <div class="p-line"><div class="p-line-fill" id="p-fill"></div></div>
     <div class="p-steps">
@@ -344,27 +340,43 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
       <div class="p-step"><div class="p-dot" id="s-done">4</div><div class="p-lbl">Done</div></div>
     </div>
   </div>
-
   <div class="status-card">
     <div class="sglow" id="sglow"></div>
     <span class="semoji" id="semoji">⏳</span>
     <div class="stitle" id="stitle">Processing</div>
     <div class="ssub" id="ssub">Please wait a moment</div>
     <div id="wave-wrap" style="display:none;">
-      <div class="wave">
-        <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
-        <div class="wbar"></div><div class="wbar"></div>
-      </div>
+      <div class="wave"><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div></div>
     </div>
     <span class="sbadge b-pending" id="sbadge">pending</span>
+    <div id="status-priority-badge" class="priority-badge" style="display:none;">⚡ Priority Job</div>
   </div>
-
   <div id="qr-box" class="qr-box" style="display:none;">
     <img id="qr-img" src="" alt="QR"/>
     <div class="qr-hint">📱 Show at counter to collect your print</div>
   </div>
-
   <button class="btn btn-ghost" onclick="goScreen('upload')" style="margin-top:14px;">+ NEW PRINT JOB</button>
+  <button class="btn btn-ghost" onclick="goScreen('history')" style="margin-top:8px;">📋 MY ORDER HISTORY</button>
+</div>
+
+<!-- SCREEN 4: ORDER HISTORY -->
+<div class="screen" id="screen-history">
+  <div class="topbar">
+    <button class="back-btn" onclick="goScreen('upload')">← Back</button>
+    <div class="logo">CampusCopy</div>
+  </div>
+  <div class="ptitle">
+    <h1>Your <span>Orders.</span></h1>
+    <p>Look up past prints by phone number</p>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>WhatsApp Number</label>
+      <input type="tel" id="history-phone" placeholder="+91 98765 43210" oninput="clearHistory()"/>
+    </div>
+    <button class="btn btn-primary" onclick="loadHistory()" style="margin:14px 0 0;width:100%;">LOOK UP ORDERS →</button>
+  </div>
+  <div id="history-results" style="margin-top:4px;"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -373,218 +385,435 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 <script>
-const API='https://campuscopy-api.onrender.com';
-let job=null,socket=null;
+const API = 'https://campuscopy-api.onrender.com';
+let job = null, socket = null;
+let pdfDoc = null, currentPage = 1;
 
-// Screen transitions
-function goScreen(name){
-  const cur=document.querySelector('.screen.active');
-  if(cur){cur.classList.add('exit');setTimeout(()=>{cur.classList.remove('active','exit');cur.style.display='none';},280);}
-  setTimeout(()=>{
-    const nxt=document.getElementById('screen-'+name);
-    nxt.style.display='block';
-    requestAnimationFrame(()=>nxt.classList.add('active'));
-    window.scrollTo({top:0,behavior:'smooth'});
-  },140);
+// ─── PDF Preview ──────────────────────────────────────────────
+async function renderPage(num) {
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(num);
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+  const baseVP = page.getViewport({ scale: 1 });
+  const scale = 110 / baseVP.width;
+  const viewport = page.getViewport({ scale });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  currentPage = num;
+  document.getElementById('preview-pageinfo').textContent = 'Page ' + num + ' of ' + pdfDoc.numPages;
+  document.getElementById('btn-prev').disabled = num <= 1;
+  document.getElementById('btn-next').disabled = num >= pdfDoc.numPages;
+}
+function previewPage(dir) {
+  const next = currentPage + dir;
+  if (pdfDoc && next >= 1 && next <= pdfDoc.numPages) renderPage(next);
 }
 
-// Toast
+// ─── Screen transitions ───────────────────────────────────────
+function goScreen(name) {
+  const cur = document.querySelector('.screen.active');
+  if (cur) { cur.classList.add('exit'); setTimeout(() => { cur.classList.remove('active','exit'); cur.style.display='none'; }, 280); }
+  setTimeout(() => {
+    const nxt = document.getElementById('screen-' + name);
+    nxt.style.display = 'block';
+    requestAnimationFrame(() => nxt.classList.add('active'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 140);
+}
+
+// ─── Toast ────────────────────────────────────────────────────
 let tt;
-function toast(msg,type=''){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast show '+type;
-  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3200);
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
-// Cost
-function updateCost(){
-  const p=parseInt(document.getElementById('pages').value)||0;
-  const c=parseInt(document.getElementById('copies').value)||1;
-  const col=document.getElementById('color').checked;
-  const ds=document.getElementById('ds').checked;
-  const price=col?5:1,mult=ds?0.8:1;
-  const cost=(p*c*price*mult).toFixed(2);
-  const el=document.getElementById('cost-num');
-  el.textContent='₹'+cost;
-  el.classList.add('bump');setTimeout(()=>el.classList.remove('bump'),280);
-  document.getElementById('cost-break').textContent=p>0?`${p} pages × ${c} cop${c>1?'ies':'y'} × ₹${price}${ds?' × 0.8':''}`:'' ;
-  const ok=document.getElementById('file-input').files.length>0&&document.getElementById('printer-select').value&&p>0;
-  document.getElementById('upload-btn').disabled=!ok;
+// ─── Cost (includes priority +₹5 and page range) ─────────────
+function updateCost() {
+  const totalPages = parseInt(document.getElementById('pages').value) || 0;
+  const c = parseInt(document.getElementById('copies').value) || 1;
+  const col = document.getElementById('color').checked;
+  const ds = document.getElementById('ds').checked;
+  const priority = document.getElementById('priority').checked;
+
+  // Page range logic
+  const fromVal = parseInt(document.getElementById('page-from').value);
+  const toVal   = parseInt(document.getElementById('page-to').value);
+  let printPages = totalPages;
+  let rangeHint = '';
+
+  if (totalPages > 0) {
+    const from = fromVal >= 1 ? fromVal : 1;
+    const to   = toVal >= 1 ? Math.min(toVal, totalPages) : totalPages;
+    if (fromVal || toVal) {
+      if (from > to) {
+        rangeHint = '⚠️ "From" must be less than "To"';
+        printPages = 0;
+      } else {
+        printPages = to - from + 1;
+        rangeHint = '✅ Printing ' + printPages + ' page' + (printPages>1?'s':'') + ' (pages ' + from + '–' + to + ')';
+      }
+    }
+    document.getElementById('range-hint').textContent = rangeHint;
+  }
+
+  const price = col ? 5 : 1, mult = ds ? 0.8 : 1;
+  const baseCost = printPages * c * price * mult;
+  const priorityFee = priority ? 5 : 0;
+  const cost = (baseCost + priorityFee).toFixed(2);
+  const el = document.getElementById('cost-num');
+  el.textContent = '₹' + cost;
+  el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 280);
+  let breakText = printPages > 0 ? printPages + ' pages × ' + c + ' cop' + (c>1?'ies':'y') + ' × ₹' + price + (ds?' × 0.8':'') : '';
+  if (priority && printPages > 0) breakText += ' + ₹5 priority';
+  document.getElementById('cost-break').textContent = breakText;
+  const ok = document.getElementById('file-input').files.length > 0
+    && document.getElementById('printer-select').value && printPages > 0;
+  document.getElementById('upload-btn').disabled = !ok;
 }
 
-// File select
-async function onFileSelect(input){
-  if(!input.files.length)return;
-  const file=input.files[0];
-  const zone=document.getElementById('upload-zone');
-  document.getElementById('uicon').textContent='⏳';
-  document.getElementById('utitle').textContent='Reading PDF…';
-  document.getElementById('usub').textContent='Detecting page count';
-  document.getElementById('ufile').textContent=file.name;
-  document.getElementById('upages').innerHTML='';
+// ─── File select ──────────────────────────────────────────────
+async function onFileSelect(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const zone = document.getElementById('upload-zone');
+  document.getElementById('uicon').textContent = '⏳';
+  document.getElementById('utitle').textContent = 'Reading PDF…';
+  document.getElementById('usub').textContent = 'Detecting page count';
+  document.getElementById('ufile').textContent = file.name;
+  document.getElementById('upages').innerHTML = '';
   zone.classList.remove('has-file');
-  try{
-    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const ab=await file.arrayBuffer();
-    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
-    const n=pdf.numPages;
-    document.getElementById('pages').value=n;
-    document.getElementById('pages-field').className='field auto-fill';
-    document.getElementById('uicon').textContent='✅';
-    document.getElementById('utitle').textContent='PDF ready!';
-    document.getElementById('usub').textContent=file.name;
-    document.getElementById('upages').innerHTML=`<div class="upages">📄 ${n} page${n>1?'s':''} detected</div>`;
+  document.getElementById('pdf-preview-wrap').style.display = 'none';
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    pdfDoc = pdf;
+    const n = pdf.numPages;
+    document.getElementById('pages').value = n;
+    document.getElementById('pages-field').className = 'field auto-fill';
+    document.getElementById('uicon').textContent = '✅';
+    document.getElementById('utitle').textContent = 'PDF ready!';
+    document.getElementById('usub').textContent = file.name;
+    document.getElementById('upages').innerHTML = '<div class="upages">📄 ' + n + ' page' + (n>1?'s':'') + ' detected</div>';
     zone.classList.add('has-file');
-    toast('✨ '+n+' pages detected!','ok');
-  }catch(e){
-    document.getElementById('uicon').textContent='✅';
-    document.getElementById('utitle').textContent=file.name;
-    document.getElementById('usub').textContent='Enter pages manually';
+    // Show page range inputs
+    document.getElementById('page-range-wrap').style.display = 'block';
+    document.getElementById('page-to').placeholder = n;
+    document.getElementById('page-from').value = '';
+    document.getElementById('page-to').value = '';
+    document.getElementById('range-hint').textContent = '';
+    document.getElementById('preview-filename').textContent = file.name;
+    document.getElementById('pdf-preview-wrap').style.display = 'block';
+    currentPage = 1;
+    await renderPage(1);
+    toast('✨ ' + n + ' page' + (n>1?'s':'') + ' detected!', 'ok');
+  } catch (e) {
+    document.getElementById('uicon').textContent = '✅';
+    document.getElementById('utitle').textContent = file.name;
+    document.getElementById('usub').textContent = 'Enter pages manually';
     zone.classList.add('has-file');
   }
   updateCost();
 }
 
-// Load printers
-async function loadPrinters(){
-  try{
-    const r=await fetch(API+'/api/printers');
-    const d=await r.json();
-    const sel=document.getElementById('printer-select');
-    sel.innerHTML='<option value="">Select printer</option>';
-    d.printers.forEach(p=>{
-      const o=document.createElement('option');
-      o.value=p.id;
-      o.textContent=(p.is_online?'🟢 ':'⚫ ')+p.name+(p.location?' — '+p.location:'');
+// ─── Load printers ────────────────────────────────────────────
+async function loadPrinters() {
+  try {
+    const r = await fetch(API + '/api/printers');
+    const d = await r.json();
+    const sel = document.getElementById('printer-select');
+    sel.innerHTML = '<option value="">Select printer</option>';
+    d.printers.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = (p.is_online ? '🟢 ' : '⚫ ') + p.name + (p.location ? ' — ' + p.location : '');
       sel.appendChild(o);
     });
-    sel.onchange=updateCost;
-  }catch{
-    document.getElementById('printer-select').innerHTML='<option value="5b4bedf3-3550-4faa-ac3d-d4f490772258">🟢 Main Printer — Ground Floor</option>';
+    sel.onchange = updateCost;
+  } catch {
+    document.getElementById('printer-select').innerHTML = '<option value="5b4bedf3-3550-4faa-ac3d-d4f490772258">🟢 Main Printer — Ground Floor</option>';
     updateCost();
   }
 }
 
-// Upload
-async function doUpload(){
-  const file=document.getElementById('file-input').files[0];
-  const btn=document.getElementById('upload-btn');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>UPLOADING…';
-  try{
-    const fd=new FormData();
-    fd.append('file',file);
-    fd.append('printer_id',document.getElementById('printer-select').value);
-    fd.append('pages',document.getElementById('pages').value);
-    fd.append('copies',document.getElementById('copies').value);
-    fd.append('color',document.getElementById('color').checked);
-    fd.append('double_sided',document.getElementById('ds').checked);
-    const r=await fetch(API+'/api/jobs/upload',{method:'POST',body:fd});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Upload failed');
-    job=d.job;
-    document.getElementById('p-fname').textContent=job.file_name;
-    document.getElementById('p-fmeta').textContent=job.pages+' pages · '+job.copies+' cop'+(job.copies>1?'ies':'y');
-    document.getElementById('p-pages').textContent=job.pages;
-    document.getElementById('p-copies').textContent=job.copies;
-    document.getElementById('p-type').textContent=(job.color?'Color':'B&W')+(job.double_sided?'+2S':'');
-    document.getElementById('p-cost').textContent='₹'+job.cost;
+// ─── Upload (sends priority flag + page range) ────────────────
+async function doUpload() {
+  const file = document.getElementById('file-input').files[0];
+  const btn = document.getElementById('upload-btn');
+  const isPriority = document.getElementById('priority').checked;
+  const totalPages = parseInt(document.getElementById('pages').value) || 0;
+  const fromVal = parseInt(document.getElementById('page-from').value);
+  const toVal   = parseInt(document.getElementById('page-to').value);
+  const from = fromVal >= 1 ? fromVal : 1;
+  const to   = toVal >= 1 ? Math.min(toVal, totalPages) : totalPages;
+  const printPages = (fromVal || toVal) ? (to - from + 1) : totalPages;
+  const hasRange = !!(fromVal || toVal);
+
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>UPLOADING…';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('printer_id', document.getElementById('printer-select').value);
+    fd.append('pages', printPages);
+    fd.append('copies', document.getElementById('copies').value);
+    fd.append('color', document.getElementById('color').checked);
+    fd.append('double_sided', document.getElementById('ds').checked);
+    fd.append('phone', document.getElementById('phone').value || '');
+    fd.append('priority', isPriority);
+    if (hasRange) {
+      fd.append('page_from', from);
+      fd.append('page_to', to);
+    }
+    const r = await fetch(API + '/api/jobs/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Upload failed');
+    job = d.job;
+    document.getElementById('p-fname').textContent = job.file_name;
+    document.getElementById('p-fmeta').textContent = job.pages + ' pages · ' + job.copies + ' cop' + (job.copies>1?'ies':'y');
+    document.getElementById('p-pages').textContent = job.pages;
+    document.getElementById('p-copies').textContent = job.copies;
+    document.getElementById('p-type').textContent = (job.color?'Color':'B&W') + (job.double_sided?'+2S':'');
+    document.getElementById('p-cost').textContent = '₹' + job.cost;
+    // Show range row in payment screen
+    if (job.page_from && job.page_to) {
+      document.getElementById('p-range-row').style.display = 'block';
+      document.getElementById('p-range-text').textContent = job.page_from + ' to ' + job.page_to;
+    } else {
+      document.getElementById('p-range-row').style.display = 'none';
+    }
+    // Show priority badge in payment screen
+    document.getElementById('p-priority-badge').style.display = job.priority ? 'flex' : 'none';
     goScreen('payment');
-  }catch(e){toast('❌ '+e.message,'err');}
-  finally{btn.disabled=false;btn.innerHTML='CONTINUE TO PAYMENT →';updateCost();}
+  } catch (e) { toast('❌ ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.innerHTML = 'CONTINUE TO PAYMENT →'; updateCost(); }
 }
 
-// Payment
-async function doPayment(){
-  const btn=document.getElementById('pay-btn');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>CREATING ORDER…';
-  try{
-    const r=await fetch(API+'/api/payments/create-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:job.id})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Order failed');
+// ─── Coupon ───────────────────────────────────────────────────
+let appliedCoupon = null;
+function clearCoupon() {
+  appliedCoupon = null;
+  const msg = document.getElementById('coupon-msg');
+  msg.style.display = 'none';
+  document.getElementById('p-original-cost').style.display = 'none';
+  document.getElementById('p-discount-line').style.display = 'none';
+  document.getElementById('p-cost').textContent = '₹' + (job?.cost || '0');
+}
+async function applyCoupon() {
+  const code = document.getElementById('coupon-input').value.trim();
+  if (!code) return;
+  if (!job) { toast('⚠️ Upload a file first', 'err'); return; }
+  const btn = document.getElementById('coupon-btn');
+  btn.textContent = '…'; btn.disabled = true;
+  const msg = document.getElementById('coupon-msg');
+  try {
+    const r = await fetch(API + '/api/coupons/validate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, job_id: job.id })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      appliedCoupon = null;
+      msg.style.display = 'block'; msg.style.color = 'var(--danger)';
+      msg.textContent = '❌ ' + d.error;
+      document.getElementById('p-original-cost').style.display = 'none';
+      document.getElementById('p-discount-line').style.display = 'none';
+      document.getElementById('p-cost').textContent = '₹' + job.cost;
+    } else {
+      appliedCoupon = d;
+      msg.style.display = 'block'; msg.style.color = 'var(--emerald)';
+      msg.textContent = '✅ ' + d.code + ' applied — you save ₹' + d.discount_amount + '!';
+      document.getElementById('p-original-cost').style.display = 'block';
+      document.getElementById('p-original-cost').textContent = '₹' + d.original_amount;
+      document.getElementById('p-discount-line').style.display = 'block';
+      document.getElementById('p-discount-line').textContent = '− ₹' + d.discount_amount + ' discount';
+      document.getElementById('p-cost').textContent = '₹' + d.final_amount;
+    }
+  } catch (e) {
+    msg.style.display = 'block'; msg.style.color = 'var(--danger)';
+    msg.textContent = '❌ Could not apply coupon';
+  } finally { btn.textContent = 'APPLY'; btn.disabled = false; }
+}
+
+// ─── Payment ──────────────────────────────────────────────────
+async function doPayment() {
+  const btn = document.getElementById('pay-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>CREATING ORDER…';
+  try {
+    const r = await fetch(API + '/api/payments/create-order', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: job.id, coupon_code: appliedCoupon?.code || null })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Order failed');
     new Razorpay({
-      key:d.key_id,amount:d.amount,currency:d.currency,order_id:d.order_id,
-      name:'CampusCopy',description:'Print — '+job.file_name,
-      handler:()=>{toast('🎉 Payment successful!','ok');showStatus();},
-      prefill:{name:'Student',email:'',contact:''},
-      theme:{color:'#a78bfa'},
-      modal:{ondismiss:()=>{btn.disabled=false;btn.innerHTML='PAY WITH RAZORPAY →';}}
+      key: d.key_id, amount: d.amount, currency: d.currency, order_id: d.order_id,
+      name: 'CampusCopy', description: 'Print — ' + job.file_name,
+      handler: () => { toast('🎉 Payment successful!', 'ok'); showStatus(); },
+      prefill: { name: 'Student', email: '', contact: document.getElementById('phone').value || '' },
+      theme: { color: '#a78bfa' },
+      modal: { ondismiss: () => { btn.disabled = false; btn.innerHTML = 'PAY WITH RAZORPAY →'; } }
     }).open();
-  }catch(e){toast('❌ '+e.message,'err');btn.disabled=false;btn.innerHTML='PAY WITH RAZORPAY →';}
+  } catch (e) { toast('❌ ' + e.message, 'err'); btn.disabled = false; btn.innerHTML = 'PAY WITH RAZORPAY →'; }
 }
 
-// Status
-function showStatus(){
+// ─── Status ───────────────────────────────────────────────────
+let pollTimer = null;
+function startFallbackPoll() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    if (!job) return;
+    try {
+      const r = await fetch(API + '/api/jobs/' + job.id);
+      const d = await r.json();
+      if (d.job) setStatus(d.job.status);
+    } catch {}
+  }, 5000);
+}
+function stopFallbackPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+function showStatus() {
   goScreen('status');
-  if(socket)socket.disconnect();
-  socket=io(API);
-  socket.emit('join_job',job.id);
-  socket.on('job_status',d=>setStatus(d.status));
-  pollStatus();
-}
-
-const SCFG={
-  pending:{e:'⏳',t:'Awaiting Payment',s:'Complete payment to proceed',g:'rgba(251,191,36,0.25)',w:0},
-  paid:{e:'💰',t:'Payment Confirmed!',s:'Job is being queued…',g:'rgba(52,211,153,0.25)',w:10},
-  queued:{e:'📋',t:'In Queue',s:'Waiting for printer to be free',g:'rgba(96,165,250,0.25)',w:40},
-  printing:{e:'🖨️',t:'Printing Now!',s:'Your document is printing',g:'rgba(167,139,250,0.35)',w:70},
-  done:{e:'✅',t:'Ready for Pickup!',s:'Show QR code at the counter',g:'rgba(52,211,153,0.35)',w:100},
-  failed:{e:'❌',t:'Print Failed',s:'Please try again or contact staff',g:'rgba(248,113,113,0.25)',w:0},
-};
-
-function setStatus(status){
-  const c=SCFG[status]||SCFG.pending;
-  document.getElementById('semoji').textContent=c.e;
-  document.getElementById('stitle').textContent=c.t;
-  document.getElementById('ssub').textContent=c.s;
-  document.getElementById('sglow').style.background=`radial-gradient(circle,${c.g},transparent 70%)`;
-  document.getElementById('p-fill').style.width=c.w+'%';
-  const badge=document.getElementById('sbadge');
-  badge.textContent=status;badge.className='sbadge b-'+status;
-  document.getElementById('wave-wrap').style.display=status==='printing'?'block':'none';
-  const steps=['paid','queued','printing','done'];
-  const idx=steps.indexOf(status);
-  steps.forEach((s,i)=>{
-    const d=document.getElementById('s-'+s);
-    if(i<idx){d.className='p-dot done';d.textContent='✓';}
-    else if(i===idx){d.className='p-dot active';d.textContent=i+1;}
-    else{d.className='p-dot';d.textContent=i+1;}
+  // Show priority badge in status screen
+  document.getElementById('status-priority-badge').style.display = job?.priority ? 'inline-flex' : 'none';
+  fetch(API + '/api/jobs/' + job.id)
+    .then(r => r.json())
+    .then(d => { if (d.job) setStatus(d.job.status); })
+    .catch(() => {});
+  if (socket) socket.disconnect();
+  socket = io(API, { transports: ['websocket', 'polling'] });
+  socket.on('connect', () => { socket.emit('join_job', job.id); stopFallbackPoll(); });
+  socket.on('job_update', d => {
+    if (d.id === job.id) {
+      setStatus(d.status);
+      if (d.status === 'done' || d.status === 'cancelled') { stopFallbackPoll(); socket.disconnect(); }
+    }
   });
-  if(status==='done'){
-    if(job?.qr_code){document.getElementById('qr-img').src=job.qr_code;document.getElementById('qr-box').style.display='block';}
-    confetti();toast('🎉 Ready for pickup!','ok');
+  socket.on('disconnect', () => startFallbackPoll());
+  socket.on('reconnect', () => { socket.emit('join_job', job.id); stopFallbackPoll(); });
+}
+
+const SCFG = {
+  pending: {e:'⏳',t:'Awaiting Payment',s:'Complete payment to proceed',g:'rgba(251,191,36,0.25)',w:0},
+  paid:    {e:'💰',t:'Payment Confirmed!',s:'Job is being queued…',g:'rgba(52,211,153,0.25)',w:10},
+  queued:  {e:'📋',t:'In Queue',s:'Waiting for printer to be free',g:'rgba(96,165,250,0.25)',w:40},
+  printing:{e:'🖨️',t:'Printing Now!',s:'Your document is printing',g:'rgba(167,139,250,0.35)',w:70},
+  done:    {e:'✅',t:'Ready for Pickup!',s:'Show QR code at the counter',g:'rgba(52,211,153,0.35)',w:100},
+  failed:  {e:'❌',t:'Print Failed',s:'Please try again or contact staff',g:'rgba(248,113,113,0.25)',w:0},
+};
+function setStatus(status) {
+  const c = SCFG[status] || SCFG.pending;
+  document.getElementById('semoji').textContent = c.e;
+  document.getElementById('stitle').textContent = c.t;
+  document.getElementById('ssub').textContent = c.s;
+  document.getElementById('sglow').style.background = 'radial-gradient(circle,' + c.g + ',transparent 70%)';
+  document.getElementById('p-fill').style.width = c.w + '%';
+  const badge = document.getElementById('sbadge');
+  badge.textContent = status; badge.className = 'sbadge b-' + status;
+  document.getElementById('wave-wrap').style.display = status === 'printing' ? 'block' : 'none';
+  const steps = ['paid','queued','printing','done'];
+  const idx = steps.indexOf(status);
+  steps.forEach((s,i) => {
+    const d = document.getElementById('s-' + s);
+    if (i < idx) { d.className='p-dot done'; d.textContent='✓'; }
+    else if (i === idx) { d.className='p-dot active'; d.textContent=i+1; }
+    else { d.className='p-dot'; d.textContent=i+1; }
+  });
+  if (status === 'done') {
+    if (job?.qr_code) { document.getElementById('qr-img').src=job.qr_code; document.getElementById('qr-box').style.display='block'; }
+    confetti(); toast('🎉 Ready for pickup!', 'ok');
   }
 }
 
-async function pollStatus(){
-  if(!job)return;
-  try{const r=await fetch(API+'/api/jobs/'+job.id);const d=await r.json();if(d.job)setStatus(d.job.status);}catch{}
-  setTimeout(pollStatus,5000);
-}
-
-// Confetti
-function confetti(){
-  const cols=['#a78bfa','#fb923c','#34d399','#fbbf24','#60a5fa'];
-  for(let i=0;i<50;i++){
-    setTimeout(()=>{
-      const el=document.createElement('div');el.className='cpcs';
-      el.style.cssText=`left:${Math.random()*100}vw;top:-10px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${Math.random()*7+3}px;height:${Math.random()*7+3}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${Math.random()*2+2}s;animation-delay:${Math.random()*.4}s;`;
-      document.body.appendChild(el);setTimeout(()=>el.remove(),4000);
-    },i*45);
+// ─── Confetti ─────────────────────────────────────────────────
+function confetti() {
+  const cols = ['#a78bfa','#fb923c','#34d399','#fbbf24','#60a5fa'];
+  for (let i=0;i<50;i++) {
+    setTimeout(() => {
+      const el=document.createElement('div'); el.className='cpcs';
+      el.style.cssText='left:'+Math.random()*100+'vw;top:-10px;background:'+cols[Math.floor(Math.random()*cols.length)]+';width:'+(Math.random()*7+3)+'px;height:'+(Math.random()*7+3)+'px;border-radius:'+(Math.random()>.5?'50%':'2px')+';animation-duration:'+(Math.random()*2+2)+'s;animation-delay:'+(Math.random()*.4)+'s;';
+      document.body.appendChild(el); setTimeout(()=>el.remove(),4000);
+    }, i*45);
   }
 }
 
-// Drag & drop
-const uz=document.getElementById('upload-zone');
-uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag-over');});
-uz.addEventListener('dragleave',()=>uz.classList.remove('drag-over'));
-uz.addEventListener('drop',e=>{
-  e.preventDefault();uz.classList.remove('drag-over');
-  const f=e.dataTransfer.files[0];
-  if(f?.type==='application/pdf'){
-    const inp=document.getElementById('file-input');
-    const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;onFileSelect(inp);
-  }else toast('⚠️ PDF only!','err');
+// ─── Drag & drop ──────────────────────────────────────────────
+const uz = document.getElementById('upload-zone');
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag-over'); });
+uz.addEventListener('dragleave', () => uz.classList.remove('drag-over'));
+uz.addEventListener('drop', e => {
+  e.preventDefault(); uz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f?.type === 'application/pdf') {
+    const inp = document.getElementById('file-input');
+    const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; onFileSelect(inp);
+  } else toast('⚠️ PDF only!', 'err');
 });
+
+// ─── Order History ────────────────────────────────────────────
+function clearHistory() { document.getElementById('history-results').innerHTML = ''; }
+async function loadHistory() {
+  const raw = document.getElementById('history-phone').value.trim();
+  if (!raw) { toast('⚠️ Enter your phone number', 'err'); return; }
+  const results = document.getElementById('history-results');
+  results.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;"><span class="spin" style="border-top-color:var(--violet);border-color:rgba(167,139,250,0.2);"></span> Loading…</div>';
+  try {
+    const phone = encodeURIComponent(raw.replace(/\s/g, ''));
+    const r = await fetch(API + '/api/jobs/by-phone/' + phone);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    if (!d.jobs.length) {
+      results.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📭</div><div style="font-weight:700;font-size:16px;margin-bottom:6px;">No orders found</div><div style="font-size:13px;color:var(--muted);">No print jobs found for this number</div></div>';
+      return;
+    }
+    const statusColors = { pending:'var(--warning)', paid:'var(--emerald)', queued:'#60a5fa', printing:'var(--violet)', done:'var(--emerald)', failed:'var(--danger)' };
+    const statusIcons = { pending:'⏳', paid:'💰', queued:'📋', printing:'🖨️', done:'✅', failed:'❌' };
+    results.innerHTML = '<div style="padding:14px 20px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">' + d.jobs.length + ' order' + (d.jobs.length > 1 ? 's' : '') + ' found</div>' +
+      d.jobs.map(j => {
+        const date = new Date(j.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+        const time = new Date(j.created_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+        const type = (j.color ? 'Color' : 'B&W') + (j.double_sided ? ' · 2-sided' : '');
+        const printer = j.printer_name || 'Unknown Printer';
+        const col = statusColors[j.status] || 'var(--muted)';
+        const icon = statusIcons[j.status] || '⏳';
+        const priorityTag = j.priority ? '<span style="font-size:10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);border-radius:20px;padding:2px 8px;color:#f59e0b;font-weight:700;margin-left:6px;">⚡ PRIORITY</span>' : '';
+        return `<div style="margin:0 20px 10px;background:var(--surface);border:1px solid ${j.priority ? 'rgba(245,158,11,0.2)' : 'var(--border)'};border-radius:16px;padding:16px;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(167,139,250,0.3)'" onmouseout="this.style.borderColor='${j.priority ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.08)'}'">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;flex:1;overflow:hidden;">
+              <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;">${j.file_name}</div>
+              ${priorityTag}
+            </div>
+            <div style="font-size:11px;font-weight:700;color:${col};background:${col}18;border:1px solid ${col}30;border-radius:20px;padding:3px 10px;flex-shrink:0;">${icon} ${j.status.toUpperCase()}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:8px;text-align:center;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;">₹${j.cost}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">COST</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:8px;text-align:center;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;">${j.pages}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">PAGES</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:8px;text-align:center;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;">${j.copies}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">COPIES</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+            <span>🖨️ ${printer}</span>
+            <span>${type}</span>
+            <span>${date} · ${time}</span>
+          </div>
+        </div>`;
+      }).join('');
+  } catch (e) {
+    results.innerHTML = '<div style="text-align:center;padding:32px;color:var(--danger);font-size:13px;">❌ ' + e.message + '</div>';
+  }
+}
 
 loadPrinters();
 </script>

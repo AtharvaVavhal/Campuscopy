@@ -69,7 +69,7 @@ function JobCard({ job, onUpdate, loading }) {
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {[
-            `📋 ${job.pages} pages`,
+            job.page_from && job.page_to ? `📑 pp. ${job.page_from}–${job.page_to}` : `📋 ${job.pages} pages`,
             `📦 ${job.copies} cop${job.copies > 1 ? 'ies' : 'y'}`,
             `🎨 ${job.color ? 'Color' : 'B&W'}`,
             `${job.double_sided ? '↔️ 2-sided' : ''}`,
