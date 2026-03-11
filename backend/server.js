@@ -63,6 +63,7 @@ app.use("/api/payments", require("./routes/payments"));
 app.use("/api/printers", require("./routes/printers"));
 app.use("/api/coupons",  require("./routes/coupons"));
 app.use("/api/loyalty",  require("./routes/loyalty"));
+app.use("/api/push",     require("./routes/push"));
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));
@@ -77,4 +78,19 @@ require("./config/redis");
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log("CampusCopy API running on port " + PORT);
+
+  // ── Keep-alive: prevents Render free tier from sleeping ──────
+  // Pings /health every 14 min. Set RENDER_EXTERNAL_URL in Render env vars.
+  if (process.env.NODE_ENV === "production" && process.env.RENDER_EXTERNAL_URL) {
+    const lib     = require(process.env.RENDER_EXTERNAL_URL.startsWith("https") ? "https" : "http");
+    const PING_URL = process.env.RENDER_EXTERNAL_URL + "/health";
+    setInterval(() => {
+      lib.get(PING_URL, (res) => {
+        console.log(`[keep-alive] ${PING_URL} → ${res.statusCode}`);
+      }).on("error", (err) => {
+        console.warn("[keep-alive] ping failed:", err.message);
+      });
+    }, 14 * 60 * 1000);
+    console.log(`[keep-alive] enabled → ${PING_URL}`);
+  }
 });

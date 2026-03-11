@@ -419,6 +419,66 @@ const API = 'https://campuscopy-api.onrender.com';
 let job = null, socket = null;
 let pdfDoc = null, currentPage = 1;
 
+// ─── Service Worker + Push Notifications ─────────────────────
+let swRegistration = null;
+
+// Register SW on load
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      swRegistration = await navigator.serviceWorker.register('/sw.js');
+      console.log('[SW] Registered');
+    } catch (err) {
+      console.warn('[SW] Registration failed:', err.message);
+    }
+  });
+}
+
+// Called right after Razorpay payment success
+async function subscribePush() {
+  if (!swRegistration || !('PushManager' in window)) return;
+  try {
+    // Ask for notification permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    // Get VAPID public key from backend
+    const keyRes = await fetch(API + '/api/push/vapid-public-key');
+    if (!keyRes.ok) return;
+    const { publicKey } = await keyRes.json();
+
+    // Subscribe to push
+    const subscription = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    // Save subscription to backend linked to this job
+    await fetch(API + '/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job_id: job.id,
+        phone: document.getElementById('phone').value.trim() || null,
+        subscription: subscription.toJSON(),
+      }),
+    });
+
+    console.log('[push] Subscribed for job', job.id);
+  } catch (err) {
+    console.warn('[push] Subscribe failed:', err.message);
+    // Non-fatal — WhatsApp still works as fallback
+  }
+}
+
+// Helper: convert VAPID key from base64 to Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
+}
+
 // ─── PDF Preview ──────────────────────────────────────────────
 async function renderPage(num) {
   if (!pdfDoc) return;
@@ -688,7 +748,7 @@ async function doPayment() {
     new Razorpay({
       key: d.key_id, amount: d.amount, currency: d.currency, order_id: d.order_id,
       name: 'CampusCopy', description: 'Print — ' + job.file_name,
-      handler: () => { toast('🎉 Payment successful!', 'ok'); showStatus(); },
+      handler: () => { toast('🎉 Payment successful!', 'ok'); subscribePush(); showStatus(); },
       prefill: { name: 'Student', email: '', contact: document.getElementById('phone').value || '' },
       theme: { color: '#a78bfa' },
       modal: { ondismiss: () => { btn.disabled = false; btn.innerHTML = 'PAY WITH RAZORPAY →'; } }

@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require("uuid");
 const db      = require("../config/db");
 const authMiddleware  = require("../middleware/auth");
 const { notifyJobStatus } = require("../utils/whatsapp");
+const { sendPush, buildPayload } = require("../utils/push");
 
 // ─── Multer ───────────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -238,6 +239,27 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
 
     // WhatsApp notification (async — never blocks response)
     if (job.phone_number) notifyJobStatus(job, status);
+
+    // Push notification — fires for printing/done/failed even if app is closed
+    const pushPayload = buildPayload(job, status);
+    if (pushPayload) {
+      db.query('SELECT * FROM push_subscriptions WHERE job_id = $1', [job.id])
+        .then(async ({ rows: subs }) => {
+          for (const sub of subs) {
+            try {
+              await sendPush(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                pushPayload
+              );
+            } catch (err) {
+              if (err.statusCode === 410) {
+                db.query('DELETE FROM push_subscriptions WHERE id = $1', [sub.id]).catch(() => {});
+              }
+            }
+          }
+        })
+        .catch(err => console.error('[push] DB error:', err.message));
+    }
 
     res.json({ job });
   } catch (err) {
