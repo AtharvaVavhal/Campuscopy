@@ -1,11 +1,9 @@
 const { Pool } = require("pg");
 
-// Render provides DATABASE_URL as a single connection string.
-// Fall back to individual vars for local dev.
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }, // required for Render PostgreSQL
+      ssl: { rejectUnauthorized: false },
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
@@ -28,8 +26,8 @@ pool.on("error",   (err) => console.error("PostgreSQL error:", err.message));
 pool.query("SELECT 1")
   .then(() => {
     console.log("✅ DB connection verified");
-    // Auto-migrate: create push_subscriptions if it doesn't exist yet
     return pool.query(`
+      -- Push subscriptions table
       CREATE TABLE IF NOT EXISTS push_subscriptions (
         id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         job_id     UUID REFERENCES jobs(id) ON DELETE CASCADE,
@@ -41,6 +39,13 @@ pool.query("SELECT 1")
         UNIQUE (job_id, endpoint)
       );
       CREATE INDEX IF NOT EXISTS idx_push_job_id ON push_subscriptions(job_id);
+
+      -- Add missing columns to jobs table (safe, skips if already exists)
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qr_code    TEXT;
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS priority   BOOLEAN DEFAULT FALSE;
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_from  INTEGER;
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_to    INTEGER;
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
   })
   .then(() => console.log("✅ Migrations applied"))
