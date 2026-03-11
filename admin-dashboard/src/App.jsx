@@ -4,7 +4,6 @@ import LoginPage from './pages/LoginPage';
 import JobQueuePage from './pages/JobQueuePage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PrintersPage from './pages/PrintersPage';
-import LoyaltyPage from './pages/LoyaltyPage';
 import Layout from './components/Layout';
 
 const queryClient = new QueryClient();
@@ -20,12 +19,18 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <Layout />
+              </PrivateRoute>
+            }
+          >
             <Route index element={<Navigate to="/jobs" replace />} />
             <Route path="jobs" element={<JobQueuePage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="printers" element={<PrintersPage />} />
-            <Route path="loyalty" element={<LoyaltyPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

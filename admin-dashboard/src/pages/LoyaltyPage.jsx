@@ -33,16 +33,22 @@ export default function LoyaltyPage() {
     <div style={{ padding: '36px 40px', maxWidth: 900 }}>
       <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 38, letterSpacing: 0.5, lineHeight: 1 }}>Loyalty Points</div>
+          <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 38, letterSpacing: 0.5, lineHeight: 1 }}>
+            Loyalty Points
+          </div>
           <div style={{ fontSize: 13, color: 'rgba(238,238,245,0.4)', marginTop: 6 }}>
             {ptsPerRupee} points = ₹1  ·  Min 50 pts to redeem  ·  Max 50% off per order
           </div>
         </div>
-        <button onClick={refetch} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', color: 'rgba(238,238,245,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>↻ Refresh</button>
+        <button onClick={refetch} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', color: 'rgba(238,238,245,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          ↻ Refresh
+        </button>
       </div>
 
       {isLoading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'rgba(238,238,245,0.3)', fontSize: 14 }}>Loading loyalty data…</div>
+        <div style={{ textAlign: 'center', padding: 60, color: 'rgba(238,238,245,0.3)', fontSize: 14 }}>
+          Loading loyalty data…
+        </div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 28 }}>
@@ -53,9 +59,14 @@ export default function LoyaltyPage() {
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '24px', marginBottom: 24 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 18, color: '#eeeef5' }}>⭐ Top Members by Points Earned</div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 18, color: '#eeeef5' }}>
+              ⭐ Top Members by Points Earned
+            </div>
+
             {students.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(238,238,245,0.3)', fontSize: 13 }}>No loyalty members yet — points are earned when jobs are completed</div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(238,238,245,0.3)', fontSize: 13 }}>
+                No loyalty members yet — points are earned when jobs are completed
+              </div>
             ) : (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12, padding: '0 0 10px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 4 }}>
@@ -63,22 +74,37 @@ export default function LoyaltyPage() {
                     <div key={h} style={{ fontSize: 10, fontWeight: 700, color: 'rgba(238,238,245,0.3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</div>
                   ))}
                 </div>
-                {students.map((s, i) => (
-                  <div key={s.phone_number} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: i < 3 ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${i < 3 ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.08)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#fbbf24' : 'rgba(238,238,245,0.4)' }}>
-                        {i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
+                {students.map((s, i) => {
+                  const rupeeValue = (s.balance * (data?.points_to_rupees || 0.10)).toFixed(2);
+                  return (
+                    <div key={s.phone_number} style={{
+                      display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12,
+                      padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      alignItems: 'center',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                          background: i < 3 ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${i < 3 ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 11, fontWeight: 700, color: i < 3 ? '#fbbf24' : 'rgba(238,238,245,0.4)',
+                        }}>
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
+                        </div>
+                        <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(238,238,245,0.7)' }}>
+                          {s.phone_number}
+                        </div>
                       </div>
-                      <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(238,238,245,0.7)' }}>{s.phone_number}</div>
+                      <div>
+                        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#fbbf24', lineHeight: 1 }}>{s.balance}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(238,238,245,0.3)', marginTop: 1 }}>≈ ₹{rupeeValue}</div>
+                      </div>
+                      <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#a78bfa', lineHeight: 1 }}>{s.earned}</div>
+                      <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#34d399', lineHeight: 1 }}>{s.redeemed}</div>
                     </div>
-                    <div>
-                      <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#fbbf24', lineHeight: 1 }}>{s.balance}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(238,238,245,0.3)', marginTop: 1 }}>≈ ₹{(s.balance * 0.10).toFixed(2)}</div>
-                    </div>
-                    <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#a78bfa', lineHeight: 1 }}>{s.earned}</div>
-                    <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#34d399', lineHeight: 1 }}>{s.redeemed}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -87,10 +113,10 @@ export default function LoyaltyPage() {
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: '#fbbf24' }}>⭐ How Loyalty Points Work</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {[
-                { icon: '🖨️', title: 'Earning', desc: '1 point per page printed. Awarded automatically when a job is marked Done.' },
-                { icon: '🎁', title: 'Redeeming', desc: '10 points = ₹1 off. Min 50 pts. Max 50% discount per order.' },
+                { icon: '🖨️', title: 'Earning',      desc: '1 point per page printed. Awarded automatically when a job is marked Done.' },
+                { icon: '🎁', title: 'Redeeming',    desc: '10 points = ₹1 off. Min 50 pts. Max 50% discount per order.' },
                 { icon: '📱', title: 'Student Flow', desc: 'Students enter their phone number to see balance on the payment screen.' },
-                { icon: '🔄', title: 'Deduction', desc: 'Points are deducted after successful Razorpay payment via webhook.' },
+                { icon: '🔄', title: 'Deduction',    desc: 'Points are deducted after successful Razorpay payment via webhook.' },
               ].map(item => (
                 <div key={item.title} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '14px 16px' }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>{item.icon}</div>
