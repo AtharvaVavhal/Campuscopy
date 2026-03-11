@@ -258,7 +258,23 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
       <div class="os-item"><div class="os-val" id="p-type">—</div><div class="os-key">Type</div></div>
     </div>
   </div>
+  <!-- Coupon -->
+  <div class="card" style="margin-top:0;padding:14px 16px;">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="coupon-input" placeholder="Have a coupon code?" 
+        style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;"
+        oninput="clearCoupon()" onkeydown="if(event.key==='Enter')applyCoupon()"/>
+      <button onclick="applyCoupon()" id="coupon-btn"
+        style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:10px;padding:10px 16px;color:var(--violet);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+        APPLY
+      </button>
+    </div>
+    <div id="coupon-msg" style="font-size:12px;margin-top:8px;display:none;padding:0 2px;"></div>
+  </div>
+
   <div class="cost-box">
+    <div style="display:none;font-size:13px;color:var(--muted);text-decoration:line-through;margin-bottom:2px;" id="p-original-cost"></div>
+    <div style="display:none;font-size:13px;color:var(--emerald);font-weight:600;margin-bottom:4px;" id="p-discount-line"></div>
     <div class="cost-num" id="p-cost">₹0</div>
     <div class="cost-lbl">Total Amount Due</div>
   </div>
@@ -489,6 +505,61 @@ async function doUpload() {
   finally { btn.disabled = false; btn.innerHTML = 'CONTINUE TO PAYMENT →'; updateCost(); }
 }
 
+// ─── Coupon ───────────────────────────────────────────────────
+let appliedCoupon = null;
+
+function clearCoupon() {
+  appliedCoupon = null;
+  const msg = document.getElementById('coupon-msg');
+  msg.style.display = 'none';
+  document.getElementById('p-original-cost').style.display = 'none';
+  document.getElementById('p-discount-line').style.display = 'none';
+  document.getElementById('p-cost').textContent = '₹' + (job?.cost || '0');
+}
+
+async function applyCoupon() {
+  const code = document.getElementById('coupon-input').value.trim();
+  if (!code) return;
+  if (!job) { toast('⚠️ Upload a file first', 'err'); return; }
+
+  const btn = document.getElementById('coupon-btn');
+  btn.textContent = '…'; btn.disabled = true;
+
+  const msg = document.getElementById('coupon-msg');
+  try {
+    const r = await fetch(API + '/api/coupons/validate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, job_id: job.id })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      appliedCoupon = null;
+      msg.style.display = 'block';
+      msg.style.color = 'var(--danger)';
+      msg.textContent = '❌ ' + d.error;
+      document.getElementById('p-original-cost').style.display = 'none';
+      document.getElementById('p-discount-line').style.display = 'none';
+      document.getElementById('p-cost').textContent = '₹' + job.cost;
+    } else {
+      appliedCoupon = d;
+      msg.style.display = 'block';
+      msg.style.color = 'var(--emerald)';
+      msg.textContent = '✅ ' + d.code + ' applied — you save ₹' + d.discount_amount + '!';
+      document.getElementById('p-original-cost').style.display = 'block';
+      document.getElementById('p-original-cost').textContent = '₹' + d.original_amount;
+      document.getElementById('p-discount-line').style.display = 'block';
+      document.getElementById('p-discount-line').textContent = '− ₹' + d.discount_amount + ' discount';
+      document.getElementById('p-cost').textContent = '₹' + d.final_amount;
+    }
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.style.color = 'var(--danger)';
+    msg.textContent = '❌ Could not apply coupon';
+  } finally {
+    btn.textContent = 'APPLY'; btn.disabled = false;
+  }
+}
+
 // ─── Payment ──────────────────────────────────────────────────
 async function doPayment() {
   const btn = document.getElementById('pay-btn');
@@ -496,7 +567,7 @@ async function doPayment() {
   try {
     const r = await fetch(API + '/api/payments/create-order', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: job.id })
+      body: JSON.stringify({ job_id: job.id, coupon_code: appliedCoupon?.code || null })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Order failed');
@@ -653,4 +724,4 @@ async function loadHistory() {
 loadPrinters();
 </script>
 </body>
-</html> 
+</html>
