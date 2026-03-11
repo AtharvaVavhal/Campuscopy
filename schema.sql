@@ -1,9 +1,5 @@
--- CampusCopy — PostgreSQL Schema
--- psql -U <user> -d campuscopy -f schema.sql
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Colleges (multi-college SaaS foundation)
 CREATE TABLE IF NOT EXISTS colleges (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name       VARCHAR(200) NOT NULL,
@@ -11,7 +7,6 @@ CREATE TABLE IF NOT EXISTS colleges (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Admins
 CREATE TABLE IF NOT EXISTS admins (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   college_id    UUID REFERENCES colleges(id) ON DELETE SET NULL,
@@ -21,7 +16,6 @@ CREATE TABLE IF NOT EXISTS admins (
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Printers
 CREATE TABLE IF NOT EXISTS printers (
   id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   college_id     UUID REFERENCES colleges(id) ON DELETE SET NULL,
@@ -32,7 +26,6 @@ CREATE TABLE IF NOT EXISTS printers (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Coupons
 CREATE TABLE IF NOT EXISTS coupons (
   id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code           VARCHAR(50) UNIQUE NOT NULL,
@@ -45,7 +38,6 @@ CREATE TABLE IF NOT EXISTS coupons (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Jobs
 CREATE TABLE IF NOT EXISTS jobs (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   college_id          UUID REFERENCES colleges(id) ON DELETE SET NULL,
@@ -73,13 +65,12 @@ CREATE TABLE IF NOT EXISTS jobs (
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_jobs_status      ON jobs(status);
-CREATE INDEX IF NOT EXISTS idx_jobs_printer_id  ON jobs(printer_id);
-CREATE INDEX IF NOT EXISTS idx_jobs_phone       ON jobs(phone_number);
-CREATE INDEX IF NOT EXISTS idx_jobs_created_at  ON jobs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_jobs_qr_token    ON jobs(qr_token);
+CREATE INDEX IF NOT EXISTS idx_jobs_status     ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_printer_id ON jobs(printer_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_phone      ON jobs(phone_number);
+CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_jobs_qr_token   ON jobs(qr_token);
 
--- Coupon uses
 CREATE TABLE IF NOT EXISTS coupon_uses (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   coupon_id       UUID REFERENCES coupons(id) ON DELETE CASCADE,
@@ -88,7 +79,6 @@ CREATE TABLE IF NOT EXISTS coupon_uses (
   used_at         TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Loyalty points (phone-based, no accounts needed)
 CREATE TABLE IF NOT EXISTS loyalty_points (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   phone      VARCHAR(20) NOT NULL,
@@ -100,20 +90,16 @@ CREATE TABLE IF NOT EXISTS loyalty_points (
 
 CREATE INDEX IF NOT EXISTS idx_loyalty_phone ON loyalty_points(phone);
 
--- Seed: default college
 INSERT INTO colleges (id, name) VALUES
   ('00000000-0000-0000-0000-000000000001', 'Vishwakarma Institute of Technology')
 ON CONFLICT DO NOTHING;
 
--- Seed: default printer (matches hardcoded UUID in frontend)
 INSERT INTO printers (id, college_id, name, location) VALUES
   ('5b4bedf3-3550-4faa-ac3d-d4f490772258',
    '00000000-0000-0000-0000-000000000001',
    'Main Printer', 'Ground Floor')
 ON CONFLICT DO NOTHING;
 
--- Seed: default admin (password: admin123)
--- To generate your own: node -e "require('bcryptjs').hash('yourpass',10).then(console.log)"
 INSERT INTO admins (college_id, name, email, password_hash) VALUES
   ('00000000-0000-0000-0000-000000000001',
    'Admin',

@@ -1,65 +1,57 @@
+// controllers/authController.js
+
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const Admin = require("../models/admin");
+const jwt    = require("jsonwebtoken");
+const db     = require("../config/db");
 
-const login = async (req, res) => {
+// POST /api/auth/login
+async function login(req, res) {
+  const { email, password } = req.body;
   try {
-    const { email, password } = req.body;
+    const { rows } = await db.query(
+      `SELECT * FROM admins WHERE email = $1 LIMIT 1`,
+      [email]
+    );
+    const admin = rows[0];
+    if (!admin) return res.status(401).json({ error: "Invalid credentials" });
 
-    const admin = await Admin.findByEmail(email);
-    if (!admin) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    const isMatch = await bcrypt.compare(password, admin.password_hash);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
+    const valid = await bcrypt.compare(password, admin.password_hash);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
     const token = jwt.sign(
-      { id: admin.id, college_id: admin.college_id, email: admin.email },
+      { id: admin.id, email: admin.email, role: "admin", college_id: admin.college_id },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
-    Admin.updateLastLogin(admin.id).catch(console.error);
-
-    return res.json({
-      token,
-      admin: {
-        id: admin.id,
-        name: admin.name,
-        email: admin.email,
-        college_id: admin.college_id,
-      },
-    });
+    res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email, college_id: admin.college_id } });
   } catch (err) {
     console.error("Login error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Login failed" });
   }
-};
+}
 
-const register = async (req, res) => {
+// POST /api/auth/register  (dev only)
+async function register(req, res) {
+  const { college_id, name, email, password } = req.body;
   try {
-    const { college_id, name, email, password } = req.body;
-
-    const existing = await Admin.findByEmail(email);
-    if (existing) {
-      return res.status(409).json({ error: "Email already registered" });
-    }
-
-    const password_hash = await bcrypt.hash(password, 12);
-    const admin = await Admin.create({ college_id, name, email, password_hash });
-
-    return res.status(201).json({ message: "Admin created", admin });
+    const password_hash = await bcrypt.hash(password, 10);
+    const { rows } = await db.query(
+      `INSERT INTO admins (college_id, name, email, password_hash, created_at)
+       VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, college_id`,
+      [college_id, name, email, password_hash]
+    );
+    res.status(201).json({ admin: rows[0] });
   } catch (err) {
+    if (err.code === "23505") return res.status(400).json({ error: "Email already registered" });
     console.error("Register error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Registration failed" });
   }
-};
+}
 
-const me = async (req, res) => {
-  return res.json({ admin: req.admin });
-};
+// GET /api/auth/me
+async function me(req, res) {
+  res.json({ user: req.user });
+}
 
 module.exports = { login, register, me };

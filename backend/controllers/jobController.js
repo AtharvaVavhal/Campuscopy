@@ -1,5 +1,5 @@
 const { emitJobStatus } = require('../utils/socket');
-const { notifyPrintReady } = require('../utils/whatsapp');
+const { notifyJobStatus } = require('../utils/whatsapp'); // ✅ correct
 const pool = require('../config/db');
 const path = require("path");
 const fs = require("fs");

@@ -1,84 +1,192 @@
-const pool = require('../config/db');
-const { createOrder, verifyWebhookSignature } = require('../utils/razorpay');
-const Coupon = require('../models/coupon');
+// controllers/paymentController.js
 
-const createPaymentOrder = async (req, res) => {
+const db     = require("../config/db");
+const Coupon = require("../models/coupon");
+const { createOrder, verifyWebhookSignature } = require("../utils/razorpay");
+
+// ─── POST /api/payments/create-order ─────────────────────────
+async function createPaymentOrder(req, res) {
+  const { job_id, coupon_code, loyalty_points = 0, phone } = req.body;
+  if (!job_id) return res.status(400).json({ error: "job_id is required" });
+
   try {
-    const { job_id, coupon_code } = req.body;
-    if (!job_id) return res.status(400).json({ error: 'job_id is required' });
-
-    const { rows } = await pool.query('SELECT * FROM jobs WHERE id = $1 LIMIT 1', [job_id]);
+    const { rows } = await db.query("SELECT * FROM jobs WHERE id = $1", [job_id]);
     const job = rows[0];
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    if (job.status !== 'pending') return res.status(400).json({ error: 'Job is not pending' });
+    if (!job)                    return res.status(404).json({ error: "Job not found" });
+    if (job.status !== "pending") return res.status(400).json({ error: "Job is not pending" });
 
     let finalAmount = parseFloat(job.cost);
-    let discountAmount = 0;
-    let couponResult = null;
 
+    // Apply coupon
     if (coupon_code) {
-      couponResult = await Coupon.validate(coupon_code, finalAmount);
-      if (couponResult.valid) {
-        discountAmount = couponResult.discount_amount;
-        finalAmount = couponResult.final_amount;
+      const coupon = await Coupon.findByCode(coupon_code);
+      if (coupon && coupon.uses_left > 0) {
+        const { discount_amount, final_amount } = Coupon.calcDiscount(coupon, finalAmount);
+        finalAmount = final_amount;
+        await db.query(
+          `UPDATE jobs SET coupon_id = $1, discount_amount = $2 WHERE id = $3`,
+          [coupon.id, discount_amount, job_id]
+        );
       }
     }
 
-    const order = await createOrder({ amount: finalAmount, currency: 'INR', receipt: job.id });
+    // Apply loyalty points (10 pts = ₹1, min 50, max 50% of bill)
+    const pts = parseInt(loyalty_points) || 0;
+    if (pts >= 50) {
+      const loyaltyDiscount = Math.min(
+        parseFloat((pts * 0.10).toFixed(2)),
+        parseFloat((finalAmount * 0.5).toFixed(2))
+      );
+      finalAmount = Math.max(parseFloat((finalAmount - loyaltyDiscount).toFixed(2)), 1);
+      await db.query(
+        `UPDATE jobs SET loyalty_points_used = $1 WHERE id = $2`,
+        [pts, job_id]
+      );
+    }
 
-    await pool.query(
-      'INSERT INTO payments (college_id, job_id, razorpay_order_id, amount) VALUES ($1, $2, $3, $4)',
-      [job.college_id, job.id, order.id, finalAmount]
+    // Save phone if provided and not already set
+    if (phone) {
+      await db.query(
+        `UPDATE jobs SET phone_number = $1 WHERE id = $2 AND phone_number IS NULL`,
+        [phone, job_id]
+      );
+    }
+
+    const order = await createOrder(finalAmount, job_id);
+
+    await db.query(
+      `UPDATE jobs SET razorpay_order_id = $1 WHERE id = $2`,
+      [order.id, job_id]
     );
 
-    // Record coupon use after order created successfully
-    if (couponResult?.valid) {
-      await Coupon.recordUse(couponResult.coupon_id, job.id, discountAmount);
-    }
-
-    return res.json({
-      order_id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID,
-      job_id: job.id,
-      original_amount: parseFloat(job.cost),
-      discount_amount: discountAmount,
+    res.json({
+      order_id:     order.id,
+      amount:       order.amount,   // paise
+      currency:     order.currency,
+      key_id:       process.env.RAZORPAY_KEY_ID,
       final_amount: finalAmount,
-      coupon_applied: couponResult?.valid ? couponResult.code : null,
     });
   } catch (err) {
-    console.error('Create order error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Create order error:", err);
+    res.status(500).json({ error: err.message || "Order creation failed" });
   }
-};
+}
 
-const webhook = async (req, res) => {
+// ─── POST /api/payments/webhook ──────────────────────────────
+async function webhook(req, res) {
+  const signature = req.headers["x-razorpay-signature"];
+  const rawBody   = req.body; // Buffer — express.raw() in server.js
+
+  if (!verifyWebhookSignature(rawBody, signature)) {
+    console.warn("Webhook: invalid signature");
+    return res.status(400).json({ error: "Invalid signature" });
+  }
+
+  let event;
   try {
-    const signature = req.headers['x-razorpay-signature'];
-    const isValid = verifyWebhookSignature(req.body, signature);
-    if (!isValid) return res.status(400).json({ error: 'Invalid signature' });
+    event = JSON.parse(rawBody.toString());
+  } catch {
+    return res.status(400).json({ error: "Invalid JSON" });
+  }
 
-    const event = JSON.parse(req.body.toString());
-    if (event.event === 'payment.captured') {
-      const orderId = event.payload.payment.entity.order_id;
-      const paymentId = event.payload.payment.entity.id;
+  if (event.event === "payment.captured") {
+    const payment = event.payload.payment.entity;
+    const orderId = payment.order_id;
 
-      const { rows } = await pool.query(
-        'UPDATE payments SET status = $1, razorpay_payment_id = $2 WHERE razorpay_order_id = $3 RETURNING *',
-        ['paid', paymentId, orderId]
+    try {
+      const { rows } = await db.query(
+        `SELECT * FROM jobs WHERE razorpay_order_id = $1`,
+        [orderId]
+      );
+      const job = rows[0];
+      if (!job) {
+        console.warn("Webhook: job not found for order", orderId);
+        return res.json({ ok: true });
+      }
+
+      // Mark paid
+      await db.query(
+        `UPDATE jobs SET status = 'paid', updated_at = NOW() WHERE id = $1`,
+        [job.id]
       );
 
-      if (rows[0]) {
-        await pool.query('UPDATE jobs SET status = $1 WHERE id = $2', ['paid', rows[0].job_id]);
+      // Socket broadcast
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`job:${job.id}`).emit("job_update", { id: job.id, status: "paid" });
+        io.emit("queue_update", { jobId: job.id, status: "paid" });
       }
+
+      // Record coupon use
+      if (job.coupon_id) {
+        await Coupon.recordUse(job.coupon_id, job.id, job.discount_amount || 0);
+      }
+
+      // Loyalty: deduct redeemed points
+      if (job.loyalty_points_used > 0 && job.phone_number) {
+        await db.query(
+          `INSERT INTO loyalty_points (phone, delta, reason, job_id, created_at)
+           VALUES ($1, $2, 'redeemed', $3, NOW())`,
+          [job.phone_number, -job.loyalty_points_used, job.id]
+        );
+      }
+
+      // Loyalty: earn 1 pt per ₹1 spent
+      if (job.phone_number) {
+        const ptsEarned = Math.floor(parseFloat(job.cost));
+        await db.query(
+          `INSERT INTO loyalty_points (phone, delta, reason, job_id, created_at)
+           VALUES ($1, $2, 'earned', $3, NOW())`,
+          [job.phone_number, ptsEarned, job.id]
+        );
+      }
+
+      console.log(`✅ Payment captured: job ${job.id}`);
+    } catch (err) {
+      console.error("Webhook processing error:", err);
     }
-
-    return res.json({ status: 'ok' });
-  } catch (err) {
-    console.error('Webhook error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
   }
-};
 
-module.exports = { createPaymentOrder, webhook };
+  res.json({ ok: true });
+}
+
+// ─── GET analytics (admin) ────────────────────────────────────
+async function getAnalytics(req, res) {
+  try {
+    const { rows: summary } = await db.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'done')                           AS total_done,
+        COALESCE(SUM(cost) FILTER (WHERE status = 'done'), 0)            AS total_revenue,
+        COALESCE(SUM(cost) FILTER (WHERE status = 'done'
+          AND created_at >= NOW() - INTERVAL '30 days'), 0)              AS revenue_30d,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS jobs_30d
+      FROM jobs
+    `);
+
+    const { rows: daily } = await db.query(`
+      SELECT DATE(created_at) AS date,
+             COUNT(*) FILTER (WHERE status = 'done') AS jobs,
+             COALESCE(SUM(cost) FILTER (WHERE status = 'done'), 0) AS revenue
+      FROM jobs
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `);
+
+    const { rows: printers } = await db.query(`
+      SELECT p.name, COUNT(j.id) AS job_count, COALESCE(SUM(j.cost),0) AS revenue
+      FROM jobs j
+      JOIN printers p ON p.id = j.printer_id
+      WHERE j.status = 'done'
+      GROUP BY p.name
+      ORDER BY job_count DESC LIMIT 5
+    `);
+
+    res.json({ summary: summary[0], daily, printers });
+  } catch (err) {
+    console.error("Analytics error:", err);
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+}
+
+module.exports = { createPaymentOrder, webhook, getAnalytics };

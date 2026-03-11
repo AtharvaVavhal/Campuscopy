@@ -1,9 +1,13 @@
-const express = require('express');
-const { createPaymentOrder, webhook } = require('../controllers/paymentController');
+// routes/payments.js
 
-const router = express.Router();
+const express = require("express");
+const router  = express.Router();
+const { createPaymentOrder, webhook } = require("../controllers/paymentController");
 
-router.post('/create-order', createPaymentOrder);
-router.post('/webhook', webhook);
+// POST /api/payments/create-order
+router.post("/create-order", createPaymentOrder);
+
+// POST /api/payments/webhook  (raw body — see server.js middleware)
+router.post("/webhook", webhook);
 
 module.exports = router;

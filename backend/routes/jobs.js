@@ -4,78 +4,91 @@ const express = require("express");
 const router  = express.Router();
 const multer  = require("multer");
 const path    = require("path");
+const fs      = require("fs");
+const QRCode  = require("qrcode");
 const { v4: uuidv4 } = require("uuid");
 const db      = require("../config/db");
 const authMiddleware  = require("../middleware/auth");
 const { notifyJobStatus } = require("../utils/whatsapp");
 
+// ─── Multer ───────────────────────────────────────────────────
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "./uploads"),
-  filename:    (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname)),
+  destination: (req, file, cb) => {
+    const dest = process.env.MULTER_DEST || "./uploads";
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    cb(null, dest);
+  },
+  filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname)),
 });
 
 const upload = multer({
   storage,
   limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE_MB) || 20) * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"];
-    allowed.includes(path.extname(file.originalname).toLowerCase())
-      ? cb(null, true)
-      : cb(new Error("Invalid file type"));
+    // Only allow PDFs (frontend enforces this too, but double-check server-side)
+    if (file.mimetype === "application/pdf") return cb(null, true);
+    cb(new Error("Only PDF files are allowed"));
   },
 });
 
-// ─── POST /api/jobs/upload ────────────────────────────────────────────────────
+// ─── POST /api/jobs/upload ────────────────────────────────────
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     const {
       printer_id,
       pages,
-      copies = 1,
-      color = false,
+      copies      = 1,
+      color       = false,
       double_sided = false,
-      phone = "",
-      priority = false,
-      page_from = null,
-      page_to = null,
+      phone       = "",
+      priority    = false,
+      page_from   = null,
+      page_to     = null,
     } = req.body;
 
     if (!req.file)   return res.status(400).json({ error: "No file uploaded" });
     if (!printer_id) return res.status(400).json({ error: "No printer selected" });
 
-    // convert string values to boolean
-    const isColor = color === "true" || color === true;
+    // Convert string → boolean
+    const isColor       = color        === "true" || color        === true;
     const isDoubleSided = double_sided === "true" || double_sided === true;
-    const isPriority = priority === "true" || priority === true;
+    const isPriority    = priority     === "true" || priority     === true;
 
-    // page range
+    // Page range
     const pageFrom = page_from ? parseInt(page_from) : null;
     const pageTo   = page_to   ? parseInt(page_to)   : null;
 
+    // Cost
     const pricePerPage = isColor ? 5 : 1;
     const multiplier   = isDoubleSided ? 0.8 : 1;
-    const cost         = (parseInt(pages) * parseInt(copies) * pricePerPage * multiplier).toFixed(2);
+    const priorityFee  = isPriority ? 5 : 0;
+    const cost = (parseInt(pages) * parseInt(copies) * pricePerPage * multiplier + priorityFee).toFixed(2);
 
-    // Look up college_id from the printer
+    // Look up college_id from printer (your multi-college architecture)
     const printerRow = await db.query(
       "SELECT college_id FROM printers WHERE id = $1",
       [printer_id]
     );
-
     const college_id = printerRow.rows[0]?.college_id || null;
+
+    // Generate QR token for counter pickup verification
+    const qr_token = uuidv4();
+    const qr_code  = await QRCode.toDataURL(JSON.stringify({ qr_token }));
 
     const jobId = uuidv4();
 
     const result = await db.query(
       `INSERT INTO jobs
-       (id, college_id, printer_id, file_name, pages, copies, color, double_sided, cost, priority, page_from, page_to, status, phone_number, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending',$13,NOW(),NOW())
+         (id, college_id, printer_id, file_name, file_path, pages, copies, color, double_sided,
+          cost, priority, page_from, page_to, status, phone_number, qr_token, qr_code, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'pending',$14,$15,$16,NOW(),NOW())
        RETURNING *`,
       [
         jobId,
         college_id,
         printer_id,
         req.file.originalname,
+        req.file.path,
         parseInt(pages),
         parseInt(copies),
         isColor,
@@ -85,6 +98,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         pageFrom,
         pageTo,
         phone.trim() || null,
+        qr_token,
+        qr_code,
       ]
     );
 
@@ -96,12 +111,28 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// ─── GET /api/jobs/by-phone/:phone ───────────────────────────────────────────
+// ─── GET /api/jobs (admin) ────────────────────────────────────
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT j.*, p.name AS printer_name
+       FROM jobs j
+       LEFT JOIN printers p ON p.id = j.printer_id
+       ORDER BY j.priority DESC, j.created_at ASC
+       LIMIT 100`
+    );
+    res.json({ jobs: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch jobs" });
+  }
+});
+
+// ─── GET /api/jobs/by-phone/:phone ───────────────────────────
 router.get("/by-phone/:phone", async (req, res) => {
   try {
     const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
     const result = await db.query(
-      `SELECT j.*, p.name AS printer_name
+      `SELECT j.*, p.name AS printer_name, p.location AS printer_location
        FROM jobs j
        LEFT JOIN printers p ON p.id = j.printer_id
        WHERE j.phone_number LIKE $1
@@ -114,7 +145,39 @@ router.get("/by-phone/:phone", async (req, res) => {
   }
 });
 
-// ─── GET /api/jobs/:id ────────────────────────────────────────────────────────
+// ─── GET /api/jobs/printer/:printer_id (print bridge) ────────
+router.get("/printer/:printer_id", authMiddleware, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM jobs
+       WHERE printer_id = $1 AND status IN ('paid','queued','printing')
+       ORDER BY priority DESC, created_at ASC`,
+      [req.params.printer_id]
+    );
+    res.json({ jobs: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch printer jobs" });
+  }
+});
+
+// ─── GET /api/jobs/qr/:token (counter verification) ──────────
+router.get("/qr/:token", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT j.*, p.name AS printer_name
+       FROM jobs j
+       LEFT JOIN printers p ON p.id = j.printer_id
+       WHERE j.qr_token = $1`,
+      [req.params.token]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "Invalid QR token" });
+    res.json({ job: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Verification failed" });
+  }
+});
+
+// ─── GET /api/jobs/:id ────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   try {
     const result = await db.query(
@@ -131,23 +194,20 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ─── GET /api/jobs (admin) ────────────────────────────────────────────────────
-router.get("/", authMiddleware, async (req, res) => {
+// ─── GET /api/jobs/:id/file (print bridge downloads PDF) ─────
+router.get("/:id/file", authMiddleware, async (req, res) => {
   try {
-    const result = await db.query(
-      `SELECT j.*, p.name AS printer_name
-       FROM jobs j
-       LEFT JOIN printers p ON p.id = j.printer_id
-       ORDER BY j.priority DESC, j.created_at ASC
-       LIMIT 100`
-    );
-    res.json({ jobs: result.rows });
+    const result = await db.query("SELECT * FROM jobs WHERE id = $1", [req.params.id]);
+    const job = result.rows[0];
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!fs.existsSync(job.file_path)) return res.status(404).json({ error: "File not found on disk" });
+    res.download(job.file_path, job.file_name);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch jobs" });
+    res.status(500).json({ error: "File download failed" });
   }
 });
 
-// ─── PATCH /api/jobs/:id/status (admin) ──────────────────────────────────────
+// ─── PATCH /api/jobs/:id/status (admin / print bridge) ───────
 router.patch("/:id/status", authMiddleware, async (req, res) => {
   try {
     const { status } = req.body;
@@ -165,17 +225,19 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
 
     // Socket — instant update to student browser
     const io = req.app.get("io");
-    io.to(`job:${job.id}`).emit("job_update", {
-      id: job.id, status: job.status, updated_at: job.updated_at,
-    });
-    if (job.printer_id) {
-      io.to(`printer:${job.printer_id}`).emit("queue_update", {
-        jobId: job.id, status: job.status,
+    if (io) {
+      io.to(`job:${job.id}`).emit("job_update", {
+        id: job.id, status: job.status, updated_at: job.updated_at,
       });
+      if (job.printer_id) {
+        io.to(`printer:${job.printer_id}`).emit("queue_update", {
+          jobId: job.id, status: job.status,
+        });
+      }
     }
 
     // WhatsApp notification (async — never blocks response)
-    notifyJobStatus(job, status);
+    if (job.phone_number) notifyJobStatus(job, status);
 
     res.json({ job });
   } catch (err) {
