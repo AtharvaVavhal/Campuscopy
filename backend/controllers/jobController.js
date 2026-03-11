@@ -1,6 +1,5 @@
 const { emitJobStatus } = require('../utils/socket');
-const { notifyJobStatus } = require('../utils/whatsapp'); // ✅ correct
-const pool = require('../config/db');
+const { notifyJobStatus } = require('../utils/whatsapp');
 const path = require("path");
 const fs = require("fs");
 const QRCode = require("qrcode");
@@ -146,25 +145,10 @@ const updateJobStatus = async (req, res) => {
     const io = req.app.get("io");
     if (io) emitJobStatus(io, job);
 
-    // Send WhatsApp notification when print is ready
-    if (status === 'done' && job.phone_number) {
-      // Fetch printer name/location for the message
-      try {
-        const { rows } = await pool.query(
-          'SELECT name, location FROM printers WHERE id = $1',
-          [job.printer_id]
-        );
-        const printer = rows[0] || { name: 'Printer', location: null };
-        notifyPrintReady({
-          phone: job.phone_number,
-          fileName: job.file_name,
-          printerName: printer.name,
-          printerLocation: printer.location,
-          cost: job.cost,
-        }).catch(err => console.error('[WhatsApp] Background send error:', err.message));
-      } catch (err) {
-        console.error('[WhatsApp] Printer lookup error:', err.message);
-      }
+    // Send WhatsApp notification on status change
+    if (job.phone_number) {
+      notifyJobStatus(job, status)
+        .catch(err => console.error('[WhatsApp] Background send error:', err.message));
     }
 
     return res.json({ job });
@@ -174,13 +158,12 @@ const updateJobStatus = async (req, res) => {
   }
 };
 
-
 // GET /api/jobs/:id/file
 const serveFile = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
-    return res.sendFile(require('path').resolve(job.file_path));
+    return res.sendFile(path.resolve(job.file_path));
   } catch (err) {
     console.error('Serve file error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -191,7 +174,6 @@ const serveFile = async (req, res) => {
 const getOrderHistory = async (req, res) => {
   try {
     let phone = req.params.phone;
-    // Normalise: if 10 digits, prepend +91
     phone = phone.replace(/[\s\-().]/g, '');
     if (/^[6-9]\d{9}$/.test(phone)) phone = '+91' + phone;
     else if (/^\d{10,12}$/.test(phone)) phone = '+' + phone;
