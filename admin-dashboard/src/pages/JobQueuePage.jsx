@@ -99,7 +99,7 @@ export default function JobQueuePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['jobs'],
-    queryFn: () => api.get(`/api/jobs/printer/${PRINTER_ID}`).then(r => r.data),
+    queryFn: () => api.get(`/api/jobs`).then(r => r.data),
     refetchInterval: 10000,
   });
 
@@ -111,7 +111,7 @@ export default function JobQueuePage() {
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
     s.emit('join_printer', PRINTER_ID);
-    s.on('job_status', () => {
+    s.on('queue_update', () => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
       setUpdates(u => u + 1);
     });
