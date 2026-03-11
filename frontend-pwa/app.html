@@ -249,12 +249,56 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
   </div>
   <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="onFileSelect(this)"/>
 
+  <!-- PDF Preview -->
+  <div id="pdf-preview-wrap" style="display:none;margin:14px 20px 0;">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;position:relative;">
+      <div style="font-size:11px;font-weight:700;color:rgba(238,238,245,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">PDF Preview</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <canvas id="pdf-canvas" style="border-radius:8px;max-width:120px;box-shadow:0 4px 20px rgba(0,0,0,0.4);flex-shrink:0;"></canvas>
+        <div>
+          <div id="preview-info" style="font-size:13px;font-weight:600;color:#eeeef5;margin-bottom:6px;"></div>
+          <div id="preview-pages" style="font-size:12px;color:rgba(238,238,245,0.45);"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="previewPage(-1)" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:5px 12px;color:#a78bfa;font-size:13px;cursor:pointer;">← Prev</button>
+            <button onclick="previewPage(1)" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:5px 12px;color:#a78bfa;font-size:13px;cursor:pointer;">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Preview -->
+  <div id="pdf-preview-wrap" style="display:none;margin:14px 20px 0;">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;position:relative;">
+      <div style="font-size:11px;font-weight:700;color:rgba(238,238,245,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">PDF Preview</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <canvas id="pdf-canvas" style="border-radius:8px;max-width:120px;box-shadow:0 4px 20px rgba(0,0,0,0.4);flex-shrink:0;"></canvas>
+        <div>
+          <div id="preview-info" style="font-size:13px;font-weight:600;color:#eeeef5;margin-bottom:6px;"></div>
+          <div id="preview-pages" style="font-size:12px;color:rgba(238,238,245,0.45);"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="previewPage(-1)" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:5px 12px;color:#a78bfa;font-size:13px;cursor:pointer;">← Prev</button>
+            <button onclick="previewPage(1)" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:5px 12px;color:#a78bfa;font-size:13px;cursor:pointer;">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="field">
       <label>Printer</label>
       <select id="printer-select" onchange="updateCost()">
         <option value="">Loading printers…</option>
       </select>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Your WhatsApp Number</label>
+      <input type="tel" id="phone" placeholder="+91 9876543210" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:12px 14px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:#eeeef5;outline:none;" />
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Your WhatsApp Number</label>
+      <input type="tel" id="phone" placeholder="+91 9876543210" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:12px 14px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:#eeeef5;outline:none;" />
     </div>
     <div class="row2" style="margin-top:12px;">
       <div class="field" id="pages-field">
@@ -375,6 +419,46 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
 <script>
 const API='https://campuscopy-api.onrender.com';
 let job=null,socket=null;
+let pdfDoc=null,currentPage=1;
+
+// PDF Preview
+async function renderPage(num){
+  if(!pdfDoc)return;
+  const page=await pdfDoc.getPage(num);
+  const canvas=document.getElementById('pdf-canvas');
+  const ctx=canvas.getContext('2d');
+  const viewport=page.getViewport({scale:0.5});
+  canvas.width=viewport.width;
+  canvas.height=viewport.height;
+  await page.render({canvasContext:ctx,viewport}).promise;
+  document.getElementById('preview-pages').textContent='Page '+num+' of '+pdfDoc.numPages;
+  currentPage=num;
+}
+
+function previewPage(dir){
+  const next=currentPage+dir;
+  if(pdfDoc&&next>=1&&next<=pdfDoc.numPages)renderPage(next);
+}
+let pdfDoc=null,currentPage=1;
+
+// PDF Preview
+async function renderPage(num){
+  if(!pdfDoc)return;
+  const page=await pdfDoc.getPage(num);
+  const canvas=document.getElementById('pdf-canvas');
+  const ctx=canvas.getContext('2d');
+  const viewport=page.getViewport({scale:0.5});
+  canvas.width=viewport.width;
+  canvas.height=viewport.height;
+  await page.render({canvasContext:ctx,viewport}).promise;
+  document.getElementById('preview-pages').textContent='Page '+num+' of '+pdfDoc.numPages;
+  currentPage=num;
+}
+
+function previewPage(dir){
+  const next=currentPage+dir;
+  if(pdfDoc&&next>=1&&next<=pdfDoc.numPages)renderPage(next);
+}
 
 // Screen transitions
 function goScreen(name){
@@ -427,6 +511,7 @@ async function onFileSelect(input){
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const ab=await file.arrayBuffer();
     const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    pdfDoc=pdf;
     const n=pdf.numPages;
     document.getElementById('pages').value=n;
     document.getElementById('pages-field').className='field auto-fill';
@@ -435,6 +520,11 @@ async function onFileSelect(input){
     document.getElementById('usub').textContent=file.name;
     document.getElementById('upages').innerHTML=`<div class="upages">📄 ${n} page${n>1?'s':''} detected</div>`;
     zone.classList.add('has-file');
+    // Show PDF preview
+    document.getElementById('pdf-preview-wrap').style.display='block';
+    document.getElementById('preview-info').textContent=file.name;
+    currentPage=1;
+    renderPage(1);
     toast('✨ '+n+' pages detected!','ok');
   }catch(e){
     document.getElementById('uicon').textContent='✅';
@@ -478,6 +568,9 @@ async function doUpload(){
     fd.append('copies',document.getElementById('copies').value);
     fd.append('color',document.getElementById('color').checked);
     fd.append('double_sided',document.getElementById('ds').checked);
+    fd.append('phone',document.getElementById('phone').value||'');
+    fd.append('phone',document.getElementById('phone').value||'');
+    fd.append('phone',document.getElementById('phone').value||'');
     const r=await fetch(API+'/api/jobs/upload',{method:'POST',body:fd});
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Upload failed');
