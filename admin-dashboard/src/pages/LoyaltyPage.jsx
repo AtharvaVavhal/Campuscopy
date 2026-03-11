@@ -38,9 +38,7 @@ export default function LoyaltyPage() {
             {ptsPerRupee} points = ₹1  ·  Min 50 pts to redeem  ·  Max 50% off per order
           </div>
         </div>
-        <button onClick={refetch} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', color: 'rgba(238,238,245,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-          ↻ Refresh
-        </button>
+        <button onClick={refetch} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', color: 'rgba(238,238,245,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>↻ Refresh</button>
       </div>
 
       {isLoading ? (
@@ -57,9 +55,7 @@ export default function LoyaltyPage() {
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '24px', marginBottom: 24 }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 18, color: '#eeeef5' }}>⭐ Top Members by Points Earned</div>
             {students.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(238,238,245,0.3)', fontSize: 13 }}>
-                No loyalty members yet — points are earned when jobs are completed
-              </div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(238,238,245,0.3)', fontSize: 13 }}>No loyalty members yet — points are earned when jobs are completed</div>
             ) : (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12, padding: '0 0 10px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 4 }}>
@@ -77,7 +73,7 @@ export default function LoyaltyPage() {
                     </div>
                     <div>
                       <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#fbbf24', lineHeight: 1 }}>{s.balance}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(238,238,245,0.3)', marginTop: 1 }}>≈ ₹{(s.balance * (data?.points_to_rupees || 0.10)).toFixed(2)}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(238,238,245,0.3)', marginTop: 1 }}>≈ ₹{(s.balance * 0.10).toFixed(2)}</div>
                     </div>
                     <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#a78bfa', lineHeight: 1 }}>{s.earned}</div>
                     <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: '#34d399', lineHeight: 1 }}>{s.redeemed}</div>
