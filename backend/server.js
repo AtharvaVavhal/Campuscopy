@@ -13,6 +13,9 @@ const { Server } = require("socket.io");
 const app = express();
 const httpServer = http.createServer(app);
 
+// ✅ FIX: Trust Render's proxy so rate limiter works correctly
+app.set("trust proxy", 1);
+
 const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
@@ -29,9 +32,9 @@ app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("Socket connected: " + socket.id);
-  socket.on("join_job", (jobId) => socket.join("job:" + jobId));
+  socket.on("join_job",     (jobId)     => socket.join("job:"     + jobId));
   socket.on("join_printer", (printerId) => socket.join("printer:" + printerId));
-  socket.on("disconnect", () => console.log("Socket disconnected: " + socket.id));
+  socket.on("disconnect",   ()          => console.log("Socket disconnected: " + socket.id));
 });
 
 app.use(helmet());
@@ -54,11 +57,11 @@ app.use("/api/auth/login", rateLimit({
   message: { error: "Too many login attempts, please try again later." },
 }));
 
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/jobs", require("./routes/jobs"));
+app.use("/api/auth",     require("./routes/auth"));
+app.use("/api/jobs",     require("./routes/jobs"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/printers", require("./routes/printers"));
-app.use("/api/coupons", require("./routes/coupons"));
+app.use("/api/coupons",  require("./routes/coupons"));
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));

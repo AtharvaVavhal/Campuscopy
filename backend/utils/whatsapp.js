@@ -1,78 +1,57 @@
-const twilio = require('twilio');
+// utils/whatsapp.js
+// Lazy-initialises the Twilio client so the server doesn't crash on startup
+// if TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN are not yet set in the environment.
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+const FROM = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
 
-const FROM = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886'; // Twilio sandbox default
+function getClient() {
+  const sid   = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token || sid.startsWith("AC...") || sid === "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") {
+    return null; // Twilio not configured — skip silently
+  }
+  return require("twilio")(sid, token);
+}
 
-/**
- * Send a WhatsApp message via Twilio.
- * @param {string} to - Phone number e.g. "+919876543210"
- * @param {string} message - Message text
- * @returns {Promise<boolean>} - true if sent, false if failed
- */
-async function sendWhatsApp(to, message) {
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-    console.warn('[WhatsApp] Twilio credentials not set — skipping notification');
-    return false;
+function normalisePhone(raw) {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length === 12) return "+" + digits;
+  if (digits.length === 10) return "+91" + digits;
+  if (digits.startsWith("0") && digits.length === 11) return "+91" + digits.slice(1);
+  return "+" + digits;
+}
+
+const TEMPLATES = {
+  printing: (job) =>
+    `🖨️ *CampusCopy Update*\n\nYour file *${job.file_name}* is now printing!\n\nJob ID: ${job.id.slice(0, 8).toUpperCase()}\nPrinter: ${job.printer_name || "Ground Floor"}\n\nWe'll message you again when it's ready for pickup.`,
+
+  done: (job) =>
+    `✅ *CampusCopy — Ready for Pickup!*\n\nYour print is done! 🎉\n\nFile: *${job.file_name}*\nPages: ${job.pages} · Copies: ${job.copies}\nPrinter: ${job.printer_name || "Ground Floor"}\n\n📍 Show your Job ID at the counter: *${job.id.slice(0, 8).toUpperCase()}*`,
+
+  failed: (job) =>
+    `❌ *CampusCopy — Print Failed*\n\nSorry, your print job for *${job.file_name}* could not be completed.\n\nPlease visit the print counter or upload again at campuscopy.pages.dev`,
+};
+
+async function notifyJobStatus(job, status) {
+  if (!job.phone_number) return;
+  const template = TEMPLATES[status];
+  if (!template) return;
+
+  const client = getClient();
+  if (!client) {
+    console.log("[WhatsApp] Twilio not configured — skipping notification");
+    return;
   }
 
-  // Normalise phone number to E.164 with whatsapp: prefix
-  const normalised = normalisePhone(to);
-  if (!normalised) {
-    console.warn('[WhatsApp] Invalid phone number:', to);
-    return false;
-  }
+  const to   = normalisePhone(job.phone_number);
+  const body = template(job);
 
   try {
-    const msg = await client.messages.create({
-      from: FROM,
-      to: 'whatsapp:' + normalised,
-      body: message,
-    });
-    console.log('[WhatsApp] Sent to', normalised, '— SID:', msg.sid);
-    return true;
+    const msg = await client.messages.create({ from: FROM, to: `whatsapp:${to}`, body });
+    console.log(`[WhatsApp] Sent ${status} to ${to} — SID: ${msg.sid}`);
   } catch (err) {
-    console.error('[WhatsApp] Send error:', err.message);
-    return false;
+    console.error(`[WhatsApp] Failed to send to ${to}:`, err.message);
   }
 }
 
-/**
- * Normalise phone to E.164 (+91XXXXXXXXXX).
- * Handles: "9876543210", "+919876543210", "919876543210", "+91 98765 43210"
- */
-function normalisePhone(raw) {
-  if (!raw) return null;
-  // Strip spaces, dashes, parentheses
-  let digits = raw.replace(/[\s\-().]/g, '');
-  // Already E.164
-  if (/^\+\d{10,15}$/.test(digits)) return digits;
-  // Strip leading +
-  if (digits.startsWith('+')) digits = digits.slice(1);
-  // Indian number without country code (10 digits starting with 6-9)
-  if (/^[6-9]\d{9}$/.test(digits)) return '+91' + digits;
-  // With country code prefix
-  if (/^\d{11,15}$/.test(digits)) return '+' + digits;
-  return null;
-}
-
-/**
- * Send the "print ready" notification.
- */
-async function notifyPrintReady({ phone, fileName, printerName, printerLocation, cost }) {
-  const location = printerLocation ? `${printerName} (${printerLocation})` : printerName;
-  const message =
-    `✅ *Your print is ready!*\n\n` +
-    `📄 *File:* ${fileName}\n` +
-    `🖨️ *Printer:* ${location}\n` +
-    `💰 *Amount paid:* ₹${cost}\n\n` +
-    `Show your QR code at the counter to collect your prints.\n\n` +
-    `— CampusCopy, VIT Pune`;
-
-  return sendWhatsApp(phone, message);
-}
-
-module.exports = { sendWhatsApp, notifyPrintReady };
+module.exports = { notifyJobStatus };
