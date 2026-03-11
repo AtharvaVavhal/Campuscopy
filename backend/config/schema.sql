@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   status          TEXT NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('pending','paid','queued','printing','done','failed')),
   qr_token        TEXT UNIQUE,
+  phone_number    TEXT,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -56,6 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_printer_id   ON jobs(printer_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status        ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_jobs_college_id    ON jobs(college_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_qr_token      ON jobs(qr_token);
+CREATE INDEX IF NOT EXISTS idx_jobs_phone_number  ON jobs(phone_number);
 CREATE INDEX IF NOT EXISTS idx_payments_job_id    ON payments(job_id);
 
 CREATE OR REPLACE FUNCTION update_updated_at()

@@ -25,6 +25,7 @@
     "qrcode": "^1.5.3",
     "razorpay": "^2.9.2",
     "socket.io": "^4.6.2",
+    "twilio": "^4.23.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

@@ -1,13 +1,13 @@
 const pool = require("../config/db");
 
 const Job = {
-  async create({ college_id, printer_id, file_path, file_name, pages, copies, color, double_sided, cost, qr_token }) {
+  async create({ college_id, printer_id, file_path, file_name, pages, copies, color, double_sided, cost, qr_token, phone_number }) {
     const { rows } = await pool.query(
       `INSERT INTO jobs 
-        (college_id, printer_id, file_path, file_name, pages, copies, color, double_sided, cost, qr_token)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        (college_id, printer_id, file_path, file_name, pages, copies, color, double_sided, cost, qr_token, phone_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [college_id, printer_id, file_path, file_name, pages, copies, color, double_sided, cost, qr_token]
+      [college_id, printer_id, file_path, file_name, pages, copies, color, double_sided, cost, qr_token, phone_number || null]
     );
     return rows[0];
   },
@@ -44,6 +44,19 @@ const Job = {
       [qr_token]
     );
     return rows[0] || null;
+  },
+
+  async listByPhone(phone_number) {
+    const { rows } = await pool.query(
+      `SELECT j.*, p.name as printer_name, p.location as printer_location
+       FROM jobs j
+       LEFT JOIN printers p ON j.printer_id = p.id
+       WHERE j.phone_number = $1
+       ORDER BY j.created_at DESC
+       LIMIT 20`,
+      [phone_number]
+    );
+    return rows;
   },
 };
 

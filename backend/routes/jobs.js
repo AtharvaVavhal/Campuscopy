@@ -8,14 +8,16 @@ const {
   getJobsByPrinter,
   updateJobStatus,
   serveFile,
+  getOrderHistory,
 } = require('../controllers/jobController');
 
 const router = express.Router();
 
 router.post('/upload', upload.single('file'), uploadJob);
+router.get('/by-phone/:phone', getOrderHistory);       // must be before /:id
+router.get('/printer/:printerId', authOrApiKey, getJobsByPrinter);
 router.get('/:id', getJob);
 router.get('/:id/file', authOrApiKey, serveFile);
-router.get('/printer/:printerId', authOrApiKey, getJobsByPrinter);
 router.patch('/:id/status', authOrApiKey, updateJobStatus);
 
 module.exports = router;

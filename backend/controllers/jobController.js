@@ -1,4 +1,6 @@
 const { emitJobStatus } = require('../utils/socket');
+const { notifyPrintReady } = require('../utils/whatsapp');
+const pool = require('../config/db');
 const path = require("path");
 const fs = require("fs");
 const QRCode = require("qrcode");
@@ -40,6 +42,7 @@ const uploadJob = async (req, res) => {
       copies = 1,
       color = false,
       double_sided = false,
+      phone = "",
     } = req.body;
 
     // Auto-count pages from PDF if not provided
@@ -76,6 +79,7 @@ const uploadJob = async (req, res) => {
       double_sided: double_sided === "true" || double_sided === true,
       cost,
       qr_token,
+      phone_number: phone || null,
     });
 
     // Generate QR code as base64 image
@@ -142,6 +146,27 @@ const updateJobStatus = async (req, res) => {
     const io = req.app.get("io");
     if (io) emitJobStatus(io, job);
 
+    // Send WhatsApp notification when print is ready
+    if (status === 'done' && job.phone_number) {
+      // Fetch printer name/location for the message
+      try {
+        const { rows } = await pool.query(
+          'SELECT name, location FROM printers WHERE id = $1',
+          [job.printer_id]
+        );
+        const printer = rows[0] || { name: 'Printer', location: null };
+        notifyPrintReady({
+          phone: job.phone_number,
+          fileName: job.file_name,
+          printerName: printer.name,
+          printerLocation: printer.location,
+          cost: job.cost,
+        }).catch(err => console.error('[WhatsApp] Background send error:', err.message));
+      } catch (err) {
+        console.error('[WhatsApp] Printer lookup error:', err.message);
+      }
+    }
+
     return res.json({ job });
   } catch (err) {
     console.error("Update status error:", err);
@@ -162,4 +187,21 @@ const serveFile = async (req, res) => {
   }
 };
 
-module.exports = { uploadJob, getJob, getJobsByPrinter, updateJobStatus, serveFile };
+// GET /api/jobs/by-phone/:phone
+const getOrderHistory = async (req, res) => {
+  try {
+    let phone = req.params.phone;
+    // Normalise: if 10 digits, prepend +91
+    phone = phone.replace(/[\s\-().]/g, '');
+    if (/^[6-9]\d{9}$/.test(phone)) phone = '+91' + phone;
+    else if (/^\d{10,12}$/.test(phone)) phone = '+' + phone;
+
+    const jobs = await Job.listByPhone(phone);
+    return res.json({ jobs, phone });
+  } catch (err) {
+    console.error('Order history error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { uploadJob, getJob, getJobsByPrinter, updateJobStatus, serveFile, getOrderHistory };
