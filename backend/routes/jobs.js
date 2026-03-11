@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require("uuid");
 const db      = require("../config/db");
 const authMiddleware  = require("../middleware/auth");
 const { notifyJobStatus } = require("../utils/whatsapp");
+const { POINTS_PER_PAGE } = require("./loyalty");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "./uploads"),
@@ -176,6 +177,20 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
 
     // WhatsApp notification (async — never blocks response)
     notifyJobStatus(job, status);
+
+    // ─── Loyalty: earn points when job is done ────────────────
+    if (status === 'done' && job.phone_number) {
+      const points = (job.pages || 0) * (job.copies || 1) * POINTS_PER_PAGE;
+      if (points > 0) {
+        db.query(
+          `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
+           VALUES ($1, $2, $3, 'earn', $4, $5)
+           ON CONFLICT DO NOTHING`,
+          [job.phone_number, job.college_id || 'college1', job.id, points,
+           `Earned ${points} pts for printing ${job.file_name}`]
+        ).catch(err => console.error('[Loyalty] Earn insert error:', err.message));
+      }
+    }
 
     res.json({ job });
   } catch (err) {
