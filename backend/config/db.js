@@ -25,7 +25,7 @@ pool.on("error",   (err) => console.error("PostgreSQL error:", err.message));
 
 async function runMigrations() {
   const migrations = [
-    // Push subscriptions table
+    // ── Push subscriptions ──────────────────────────────────
     `CREATE TABLE IF NOT EXISTS push_subscriptions (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       job_id     UUID REFERENCES jobs(id) ON DELETE CASCADE,
@@ -38,14 +38,60 @@ async function runMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_push_job_id ON push_subscriptions(job_id)`,
 
-    // Phase 1 columns
+    // ── Coupons ─────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS coupons (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      college_id     TEXT NOT NULL DEFAULT 'college1',
+      code           TEXT UNIQUE NOT NULL,
+      discount_type  TEXT NOT NULL CHECK (discount_type IN ('percent', 'flat')),
+      discount_value NUMERIC(8,2) NOT NULL,
+      min_order      NUMERIC(8,2) DEFAULT 0,
+      uses_left      INTEGER,
+      expires_at     TIMESTAMPTZ,
+      is_active      BOOLEAN DEFAULT TRUE,
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS coupon_uses (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      coupon_id    UUID REFERENCES coupons(id) ON DELETE CASCADE,
+      job_id       UUID REFERENCES jobs(id) ON DELETE CASCADE,
+      saved_amount NUMERIC(8,2) NOT NULL,
+      used_at      TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_coupons_code        ON coupons(code)`,
+    `CREATE INDEX IF NOT EXISTS idx_coupon_uses_coupon  ON coupon_uses(coupon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_coupon_uses_job     ON coupon_uses(job_id)`,
+
+    // ── Loyalty transactions (used by routes/loyalty.js) ────
+    `CREATE TABLE IF NOT EXISTS loyalty_transactions (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      phone_number TEXT NOT NULL,
+      college_id   TEXT NOT NULL DEFAULT 'college1',
+      job_id       UUID REFERENCES jobs(id) ON DELETE SET NULL,
+      type         TEXT NOT NULL CHECK (type IN ('earn', 'redeem')),
+      points       INTEGER NOT NULL,
+      description  TEXT,
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_loyalty_phone ON loyalty_transactions(phone_number)`,
+
+    // ── Loyalty points (used by paymentController webhook) ──
+    `CREATE TABLE IF NOT EXISTS loyalty_points (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      phone      TEXT NOT NULL,
+      delta      INTEGER NOT NULL,
+      reason     TEXT,
+      job_id     UUID REFERENCES jobs(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_loyalty_points_phone ON loyalty_points(phone)`,
+
+    // ── Missing jobs columns ─────────────────────────────────
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qr_code             TEXT`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS priority            BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_from           INTEGER`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_to             INTEGER`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS updated_at          TIMESTAMPTZ DEFAULT NOW()`,
-
-    // Payment columns
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS razorpay_order_id   TEXT`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS coupon_id           UUID`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS discount_amount     NUMERIC(8,2) DEFAULT 0`,
