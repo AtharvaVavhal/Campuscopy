@@ -52,7 +52,7 @@ async function createPaymentOrder(req, res) {
       );
     }
 
-    const order = await createOrder(finalAmount, job_id);
+const order = await createOrder({ amount: finalAmount, receipt: job_id });
 
     await db.query(
       `UPDATE jobs SET razorpay_order_id = $1 WHERE id = $2`,
