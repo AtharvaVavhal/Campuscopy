@@ -1,12 +1,9 @@
 // utils/whatsapp.js
-
 const twilio = require("twilio");
-
 let client;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
-
 const FROM = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
 
 async function sendWhatsApp(to, body) {
@@ -14,8 +11,13 @@ async function sendWhatsApp(to, body) {
     console.log("[WhatsApp] Twilio not configured, skipping.");
     return;
   }
-  const cleaned     = to.replace(/\s+/g, "");
-  const toFormatted = cleaned.startsWith("whatsapp:") ? cleaned : `whatsapp:${cleaned}`;
+  const cleaned = to.replace(/\s+/g, "");
+  // Add +91 country code if not present
+  let withCountry = cleaned;
+  if (!withCountry.startsWith("+") && !withCountry.startsWith("whatsapp:")) {
+    withCountry = "+91" + withCountry;
+  }
+  const toFormatted = withCountry.startsWith("whatsapp:") ? withCountry : `whatsapp:${withCountry}`;
   try {
     const msg = await client.messages.create({ from: FROM, to: toFormatted, body });
     console.log(`[WhatsApp] Sent to ${toFormatted}: ${msg.sid}`);
@@ -28,7 +30,6 @@ async function sendWhatsApp(to, body) {
 // Called from routes/jobs.js as: notifyJobStatus(job, status)
 async function notifyJobStatus(job, status) {
   if (!job.phone_number) return;
-
   const messages = {
     printing:
       `🖨️ *CampusCopy* — Printing started!\n\n` +
@@ -45,7 +46,6 @@ async function notifyJobStatus(job, status) {
       `📄 ${job.file_name} could not be printed.\n` +
       `Please contact the print operator or try again.`,
   };
-
   const msg = messages[status];
   if (msg) await sendWhatsApp(job.phone_number, msg);
 }
