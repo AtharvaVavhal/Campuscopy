@@ -106,6 +106,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
 // ─── GET /api/jobs (admin) ────────────────────────────────────
 router.get("/", authMiddleware, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const result = await db.query(
       `SELECT j.*, p.name AS printer_name
