@@ -62,7 +62,7 @@ async function runMigrations() {
     `CREATE INDEX IF NOT EXISTS idx_coupon_uses_coupon  ON coupon_uses(coupon_id)`,
     `CREATE INDEX IF NOT EXISTS idx_coupon_uses_job     ON coupon_uses(job_id)`,
 
-    // ── Loyalty transactions (used by routes/loyalty.js) ────
+    // ── Loyalty transactions ─────────────────────────────────
     `CREATE TABLE IF NOT EXISTS loyalty_transactions (
       id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       phone_number TEXT NOT NULL,
@@ -75,7 +75,7 @@ async function runMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_loyalty_phone ON loyalty_transactions(phone_number)`,
 
-    // ── Loyalty points (used by paymentController webhook) ──
+    // ── Loyalty points ───────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS loyalty_points (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       phone      TEXT NOT NULL,
@@ -85,6 +85,16 @@ async function runMigrations() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`,
     `CREATE INDEX IF NOT EXISTS idx_loyalty_points_phone ON loyalty_points(phone)`,
+
+    // ── Admins table ─────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS admins (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      college_id    TEXT NOT NULL DEFAULT 'college1',
+      name          TEXT NOT NULL,
+      email         TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )`,
 
     // ── Missing jobs columns ─────────────────────────────────
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qr_code             TEXT`,
