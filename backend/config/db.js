@@ -38,12 +38,18 @@ async function runMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_push_job_id ON push_subscriptions(job_id)`,
 
-    // Missing job columns - each runs as a separate query
-    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qr_code    TEXT`,
-    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS priority   BOOLEAN DEFAULT FALSE`,
-    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_from  INTEGER`,
-    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_to    INTEGER`,
-    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
+    // Phase 1 columns
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS qr_code             TEXT`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS priority            BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_from           INTEGER`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS page_to             INTEGER`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS updated_at          TIMESTAMPTZ DEFAULT NOW()`,
+
+    // Payment columns
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS razorpay_order_id   TEXT`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS coupon_id           UUID`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS discount_amount     NUMERIC(8,2) DEFAULT 0`,
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS loyalty_points_used INTEGER DEFAULT 0`,
   ];
 
   for (const sql of migrations) {
