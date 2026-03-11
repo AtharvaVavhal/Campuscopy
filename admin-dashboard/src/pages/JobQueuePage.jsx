@@ -30,42 +30,28 @@ function Badge({ status }) {
   );
 }
 
-function PriorityBadge() {
-  return (
-    <span style={{
-      padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: 1,
-      background: 'rgba(245,158,11,0.12)', color: '#f59e0b',
-      border: '1px solid rgba(245,158,11,0.3)',
-      flexShrink: 0,
-    }}>⚡ Priority</span>
-  );
-}
-
 function JobCard({ job, onUpdate, loading }) {
   const [hovered, setHovered] = useState(false);
   const next = NEXT[job.status];
-  const isPriority = job.priority;
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? 'rgba(255,255,255,0.06)' : (isPriority ? 'rgba(245,158,11,0.04)' : 'rgba(255,255,255,0.03)'),
-        border: `1px solid ${hovered ? 'rgba(167,139,250,0.25)' : (isPriority ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.07)')}`,
+        background: hovered ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${hovered ? 'rgba(167,139,250,0.25)' : 'rgba(255,255,255,0.07)'}`,
         borderRadius: 16, padding: '18px 20px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         transition: 'all 0.2s',
       }}
     >
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 240 }}>
             📄 {job.file_name}
           </span>
           <Badge status={job.status} />
-          {isPriority && <PriorityBadge />}
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {[
@@ -88,15 +74,13 @@ function JobCard({ job, onUpdate, loading }) {
           onClick={() => onUpdate(job.id, next)}
           disabled={loading}
           style={{
-            background: isPriority
-              ? 'linear-gradient(135deg,#f59e0b,#d97706)'
-              : 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+            background: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
             border: 'none', borderRadius: 10, padding: '9px 18px',
             color: 'white', fontSize: 12, fontWeight: 700,
             cursor: loading ? 'not-allowed' : 'pointer',
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             whiteSpace: 'nowrap', opacity: loading ? 0.6 : 1,
-            boxShadow: isPriority ? '0 4px 16px rgba(245,158,11,0.3)' : '0 4px 16px rgba(167,139,250,0.25)',
+            boxShadow: '0 4px 16px rgba(167,139,250,0.25)',
             transition: 'all 0.2s',
             flexShrink: 0,
           }}
@@ -115,7 +99,7 @@ export default function JobQueuePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['jobs'],
-    queryFn: () => api.get(`/api/jobs`).then(r => r.data),
+    queryFn: () => api.get(`/api/jobs/printer/${PRINTER_ID}`).then(r => r.data),
     refetchInterval: 10000,
   });
 
@@ -127,19 +111,14 @@ export default function JobQueuePage() {
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
     s.emit('join_printer', PRINTER_ID);
-    s.on('queue_update', () => {
+    s.on('job_status', () => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
       setUpdates(u => u + 1);
     });
     return () => s.disconnect();
   }, []);
 
-  // Sort: priority jobs first, then by created_at
-  const jobs = (data?.jobs || []).sort((a, b) => {
-    if (a.priority && !b.priority) return -1;
-    if (!a.priority && b.priority) return 1;
-    return new Date(a.created_at) - new Date(b.created_at);
-  });
+  const jobs = data?.jobs || [];
 
   const filtered = filter === 'active'
     ? jobs.filter(j => !['done', 'failed'].includes(j.status))
@@ -154,8 +133,6 @@ export default function JobQueuePage() {
     done:     jobs.filter(j => j.status === 'done').length,
   };
 
-  const priorityCount = jobs.filter(j => j.priority && !['done','failed'].includes(j.status)).length;
-
   return (
     <div style={{ padding: '36px 40px', maxWidth: 860 }}>
       {/* Header */}
@@ -169,11 +146,6 @@ export default function JobQueuePage() {
             {updates > 0 && (
               <span style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 20, padding: '2px 10px', fontSize: 11, color: '#34d399', fontWeight: 700 }}>
                 {updates} live update{updates > 1 ? 's' : ''}
-              </span>
-            )}
-            {priorityCount > 0 && (
-              <span style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 20, padding: '2px 10px', fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>
-                ⚡ {priorityCount} priority
               </span>
             )}
           </div>
