@@ -21,7 +21,6 @@ const createPaymentOrder = async (req, res) => {
     let loyaltyDiscount = 0;
     let loyaltyPointsUsed = 0;
 
-    // 1. Apply coupon first
     if (coupon_code) {
       couponResult = await Coupon.validate(coupon_code, finalAmount);
       if (couponResult.valid) {
@@ -30,7 +29,6 @@ const createPaymentOrder = async (req, res) => {
       }
     }
 
-    // 2. Apply loyalty points on top (after coupon)
     const phoneNum = phone || job.phone_number;
     if (loyalty_points && parseInt(loyalty_points) > 0 && phoneNum) {
       const pts = parseInt(loyalty_points);
@@ -58,8 +56,7 @@ const createPaymentOrder = async (req, res) => {
       `INSERT INTO payments (college_id, job_id, razorpay_order_id, amount, phone_number, loyalty_points_used)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [job.college_id, job.id, order.id, finalAmount,
-       phoneNum || null,
-       loyaltyPointsUsed > 0 ? loyaltyPointsUsed : null]
+       phoneNum || null, loyaltyPointsUsed > 0 ? loyaltyPointsUsed : null]
     );
 
     if (couponResult?.valid) {
@@ -67,11 +64,8 @@ const createPaymentOrder = async (req, res) => {
     }
 
     return res.json({
-      order_id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID,
-      job_id: job.id,
+      order_id: order.id, amount: order.amount, currency: order.currency,
+      key_id: process.env.RAZORPAY_KEY_ID, job_id: job.id,
       original_amount: parseFloat(job.cost),
       discount_amount: discountAmount,
       loyalty_discount: loyaltyDiscount,
@@ -104,7 +98,6 @@ const webhook = async (req, res) => {
       if (rows[0]) {
         await pool.query('UPDATE jobs SET status = $1 WHERE id = $2', ['paid', rows[0].job_id]);
 
-        // Deduct loyalty points used in this payment
         if (rows[0].loyalty_points_used && rows[0].phone_number) {
           const { rows: jobRows } = await pool.query(
             'SELECT college_id FROM jobs WHERE id = $1', [rows[0].job_id]

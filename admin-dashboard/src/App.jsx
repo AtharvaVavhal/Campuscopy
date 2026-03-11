@@ -20,14 +20,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <Layout />
-              </PrivateRoute>
-            }
-          >
+          <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Navigate to="/jobs" replace />} />
             <Route path="jobs" element={<JobQueuePage />} />
             <Route path="analytics" element={<AnalyticsPage />} />

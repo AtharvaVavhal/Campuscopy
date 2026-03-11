@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 
 const NAV = [
-  { path: '/jobs',      icon: '🖨️', label: 'Print Queue'  },
-  { path: '/analytics', icon: '📊', label: 'Analytics'    },
-  { path: '/printers',  icon: '⚙️', label: 'Printers'     },
-  { path: '/loyalty',   icon: '⭐', label: 'Loyalty'      },
+  { path: '/jobs',      icon: '🖨️', label: 'Print Queue' },
+  { path: '/analytics', icon: '📊', label: 'Analytics'   },
+  { path: '/printers',  icon: '⚙️', label: 'Printers'    },
+  { path: '/loyalty',   icon: '⭐', label: 'Loyalty'     },
 ];
 
 export default function Layout() {
@@ -28,7 +28,6 @@ export default function Layout() {
       `}</style>
 
       <div style={{ display: 'flex', minHeight: '100vh', background: '#08080f' }}>
-
         <aside style={{
           width: 220, flexShrink: 0,
           background: 'rgba(255,255,255,0.03)',
@@ -39,8 +38,7 @@ export default function Layout() {
         }}>
           <div style={{ padding: '0 20px 28px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <div style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 22, letterSpacing: 2,
+              fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: 2,
               background: 'linear-gradient(135deg,#a78bfa,#34d399)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>CampusCopy</div>

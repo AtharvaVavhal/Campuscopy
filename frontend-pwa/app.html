@@ -311,40 +311,9 @@ input:checked+.slider:before{transform:translateX(21px);background:white;}
     <div id="coupon-msg" style="font-size:12px;margin-top:8px;display:none;padding:0 2px;"></div>
   </div>
 
-
-  <!-- Loyalty Points -->
-  <div class="card" id="loyalty-card" style="margin-top:0;padding:14px 16px;display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:18px;">⭐</span>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#fbbf24;">Loyalty Points</div>
-          <div style="font-size:11px;color:var(--muted);" id="loyalty-balance-label">Loading balance…</div>
-        </div>
-      </div>
-      <label class="switch" style="flex-shrink:0;">
-        <input type="checkbox" id="loyalty-toggle" onchange="toggleLoyalty()"/>
-        <span class="slider" style="background:rgba(251,191,36,0.2);"></span>
-      </label>
-    </div>
-    <div id="loyalty-redeem-wrap" style="display:none;">
-      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-        <input type="number" id="loyalty-pts-input"
-          style="flex:1;background:var(--surface);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;"
-          placeholder="Points to use" oninput="updateLoyaltyDiscount()"/>
-        <button onclick="applyMaxLoyalty()"
-          style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 14px;color:#fbbf24;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
-          MAX
-        </button>
-      </div>
-      <div id="loyalty-msg" style="font-size:12px;margin-top:8px;color:var(--emerald);display:none;"></div>
-    </div>
-  </div>
-
   <div class="cost-box">
     <div style="display:none;font-size:13px;color:var(--muted);text-decoration:line-through;margin-bottom:2px;" id="p-original-cost"></div>
     <div style="display:none;font-size:13px;color:var(--emerald);font-weight:600;margin-bottom:4px;" id="p-discount-line"></div>
-    <div style="display:none;font-size:13px;color:#fbbf24;font-weight:600;margin-bottom:4px;" id="p-loyalty-line"></div>
     <div class="cost-num" id="p-cost">₹0</div>
     <div class="cost-lbl">Total Amount Due</div>
   </div>
@@ -618,15 +587,6 @@ async function doUpload() {
     }
     // Show priority badge in payment screen
     document.getElementById('p-priority-badge').style.display = job.priority ? 'flex' : 'none';
-    // Load loyalty balance for this phone
-    const phoneVal = document.getElementById('phone').value.trim();
-    appliedLoyaltyPoints = 0;
-    document.getElementById('loyalty-toggle').checked = false;
-    document.getElementById('loyalty-redeem-wrap').style.display = 'none';
-    document.getElementById('loyalty-msg').style.display = 'none';
-    document.getElementById('p-loyalty-line').style.display = 'none';
-    if (phoneVal) loadLoyaltyBalance(phoneVal);
-    else document.getElementById('loyalty-card').style.display = 'none';
     goScreen('payment');
   } catch (e) { toast('❌ ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.innerHTML = 'CONTINUE TO PAYMENT →'; updateCost(); }
@@ -685,12 +645,7 @@ async function doPayment() {
   try {
     const r = await fetch(API + '/api/payments/create-order', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        job_id: job.id,
-        coupon_code: appliedCoupon?.code || null,
-        loyalty_points: appliedLoyaltyPoints || 0,
-        phone: document.getElementById('phone').value.trim() || null,
-      })
+      body: JSON.stringify({ job_id: job.id, coupon_code: appliedCoupon?.code || null })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Order failed');
@@ -771,14 +726,6 @@ function setStatus(status) {
   if (status === 'done') {
     if (job?.qr_code) { document.getElementById('qr-img').src=job.qr_code; document.getElementById('qr-box').style.display='block'; }
     confetti(); toast('🎉 Ready for pickup!', 'ok');
-    // Show loyalty earned notification
-    const phone = job?.phone_number || document.getElementById('phone')?.value?.trim();
-    if (phone) {
-      const earned = (job?.pages || 0) * (job?.copies || 1);
-      if (earned > 0) {
-        setTimeout(() => toast('⭐ +' + earned + ' loyalty points earned!', 'ok'), 2000);
-      }
-    }
   }
 }
 
@@ -823,25 +770,9 @@ async function loadHistory() {
       results.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📭</div><div style="font-weight:700;font-size:16px;margin-bottom:6px;">No orders found</div><div style="font-size:13px;color:var(--muted);">No print jobs found for this number</div></div>';
       return;
     }
-    // Fetch loyalty balance alongside orders
-    let loyaltyInfo = null;
-    try {
-      const lr = await fetch(API + '/api/loyalty/' + phone);
-      if (lr.ok) loyaltyInfo = await lr.json();
-    } catch {}
-
     const statusColors = { pending:'var(--warning)', paid:'var(--emerald)', queued:'#60a5fa', printing:'var(--violet)', done:'var(--emerald)', failed:'var(--danger)' };
     const statusIcons = { pending:'⏳', paid:'💰', queued:'📋', printing:'🖨️', done:'✅', failed:'❌' };
-    const loyaltyBanner = loyaltyInfo && loyaltyInfo.balance > 0
-      ? `<div style="margin:8px 20px 4px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
-           <span style="font-size:22px;">⭐</span>
-           <div>
-             <div style="font-size:13px;font-weight:700;color:#fbbf24;">${loyaltyInfo.balance} Points</div>
-             <div style="font-size:11px;color:var(--muted);">Worth ₹${loyaltyInfo.rupee_value} · ${loyaltyInfo.total_earned} earned · ${loyaltyInfo.total_redeemed} redeemed</div>
-           </div>
-         </div>`
-      : '';
-    results.innerHTML = loyaltyBanner + '<div style="padding:14px 20px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">' + d.jobs.length + ' order' + (d.jobs.length > 1 ? 's' : '') + ' found</div>' +
+    results.innerHTML = '<div style="padding:14px 20px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">' + d.jobs.length + ' order' + (d.jobs.length > 1 ? 's' : '') + ' found</div>' +
       d.jobs.map(j => {
         const date = new Date(j.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
         const time = new Date(j.created_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
@@ -881,102 +812,6 @@ async function loadHistory() {
       }).join('');
   } catch (e) {
     results.innerHTML = '<div style="text-align:center;padding:32px;color:var(--danger);font-size:13px;">❌ ' + e.message + '</div>';
-  }
-}
-
-
-// ─── Loyalty Points ───────────────────────────────────────────
-let loyaltyBalance = 0;
-let appliedLoyaltyPoints = 0;
-
-async function loadLoyaltyBalance(phone) {
-  if (!phone || phone.length < 10) {
-    document.getElementById('loyalty-card').style.display = 'none';
-    return;
-  }
-  try {
-    const r = await fetch(API + '/api/loyalty/' + encodeURIComponent(phone.replace(/\s/g, '')));
-    const d = await r.json();
-    if (!r.ok) return;
-    loyaltyBalance = d.balance || 0;
-    const card = document.getElementById('loyalty-card');
-    const label = document.getElementById('loyalty-balance-label');
-    if (loyaltyBalance >= 50) {
-      card.style.display = 'block';
-      label.textContent = loyaltyBalance + ' pts available  ·  worth ₹' + d.rupee_value;
-    } else if (loyaltyBalance > 0) {
-      card.style.display = 'block';
-      label.innerHTML = loyaltyBalance + ' pts  <span style="color:var(--muted);">(need 50 to redeem)</span>';
-      document.getElementById('loyalty-toggle').disabled = true;
-    } else {
-      card.style.display = 'none';
-    }
-  } catch { /* ignore */ }
-}
-
-function toggleLoyalty() {
-  const on = document.getElementById('loyalty-toggle').checked;
-  const wrap = document.getElementById('loyalty-redeem-wrap');
-  wrap.style.display = on ? 'block' : 'none';
-  if (!on) {
-    appliedLoyaltyPoints = 0;
-    document.getElementById('loyalty-pts-input').value = '';
-    document.getElementById('loyalty-msg').style.display = 'none';
-    document.getElementById('p-loyalty-line').style.display = 'none';
-    // Recalculate cost display (re-apply coupon only)
-    const base = appliedCoupon ? appliedCoupon.final_amount : parseFloat(job?.cost || 0);
-    document.getElementById('p-cost').textContent = '₹' + base;
-  }
-}
-
-function applyMaxLoyalty() {
-  if (!job) return;
-  const base = appliedCoupon ? appliedCoupon.final_amount : parseFloat(job.cost);
-  const maxByPercent = Math.floor(base * 50 / 10) * 10; // round to nearest 10 pts
-  const maxByBalance = loyaltyBalance;
-  const max = Math.min(maxByPercent, maxByBalance);
-  document.getElementById('loyalty-pts-input').value = max;
-  updateLoyaltyDiscount();
-}
-
-function updateLoyaltyDiscount() {
-  const pts = parseInt(document.getElementById('loyalty-pts-input').value) || 0;
-  const msg = document.getElementById('loyalty-msg');
-  if (!job || pts <= 0) {
-    appliedLoyaltyPoints = 0;
-    msg.style.display = 'none';
-    document.getElementById('p-loyalty-line').style.display = 'none';
-    const base = appliedCoupon ? appliedCoupon.final_amount : parseFloat(job?.cost || 0);
-    document.getElementById('p-cost').textContent = '₹' + base;
-    return;
-  }
-  if (pts < 50) {
-    msg.style.display = 'block'; msg.style.color = 'var(--danger)';
-    msg.textContent = '⚠️ Minimum 50 points to redeem';
-    appliedLoyaltyPoints = 0; return;
-  }
-  if (pts > loyaltyBalance) {
-    msg.style.display = 'block'; msg.style.color = 'var(--danger)';
-    msg.textContent = '⚠️ Not enough points (have ' + loyaltyBalance + ')';
-    appliedLoyaltyPoints = 0; return;
-  }
-  const base = appliedCoupon ? appliedCoupon.final_amount : parseFloat(job.cost);
-  const maxDiscount = parseFloat((base * 0.5).toFixed(2));
-  const requested = parseFloat((pts * 0.10).toFixed(2));
-  const discount = Math.min(requested, maxDiscount);
-  const actualPts = Math.round(discount / 0.10);
-  appliedLoyaltyPoints = actualPts;
-  const finalAmt = Math.max(parseFloat((base - discount).toFixed(2)), 1);
-  msg.style.display = 'block'; msg.style.color = '#fbbf24';
-  msg.textContent = '⭐ ' + actualPts + ' pts  →  ₹' + discount + ' off!';
-  document.getElementById('p-loyalty-line').style.display = 'block';
-  document.getElementById('p-loyalty-line').textContent = '− ₹' + discount + ' loyalty discount';
-  document.getElementById('p-cost').textContent = '₹' + finalAmt;
-  // Also update original cost line
-  const couponDisc = appliedCoupon ? appliedCoupon.discount_amount : 0;
-  if (couponDisc > 0 || discount > 0) {
-    document.getElementById('p-original-cost').style.display = 'block';
-    document.getElementById('p-original-cost').textContent = '₹' + job.cost;
   }
 }
 

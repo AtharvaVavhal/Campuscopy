@@ -1,20 +1,16 @@
-// routes/loyalty.js
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const auth = require('../middleware/auth');
 
-// ─── Points config ────────────────────────────────────────────
-const POINTS_PER_PAGE = 1;       // 1 point per page printed
-const POINTS_TO_RUPEES = 0.10;   // 10 points = ₹1  →  100 points = ₹10
-const MIN_REDEEM = 50;           // minimum 50 points to redeem
-const MAX_REDEEM_PERCENT = 50;   // can't redeem more than 50% of job cost
+const POINTS_PER_PAGE = 1;
+const POINTS_TO_RUPEES = 0.10;
+const MIN_REDEEM = 50;
+const MAX_REDEEM_PERCENT = 50;
 
-// ─── GET /api/loyalty/:phone ─ get balance & history ─────────
 router.get('/:phone', async (req, res) => {
   try {
     const phone = decodeURIComponent(req.params.phone).replace(/\s/g, '');
-
     const { rows } = await db.query(
       `SELECT
          COALESCE(SUM(CASE WHEN type='earn'   THEN points ELSE 0 END), 0)::int AS total_earned,
@@ -23,12 +19,10 @@ router.get('/:phone', async (req, res) => {
        WHERE phone_number LIKE $1`,
       ['%' + phone.replace(/^\+?91/, '')]
     );
-
     const earned   = parseInt(rows[0].total_earned);
     const redeemed = parseInt(rows[0].total_redeemed);
     const balance  = earned - redeemed;
 
-    // Last 10 transactions
     const { rows: txns } = await db.query(
       `SELECT lt.*, j.file_name
        FROM loyalty_transactions lt
@@ -53,9 +47,6 @@ router.get('/:phone', async (req, res) => {
   }
 });
 
-// ─── POST /api/loyalty/redeem ─ apply points at checkout ─────
-// Returns a discount amount (like a coupon), doesn't deduct yet —
-// actual deduction happens in the payment webhook after payment succeeds.
 router.post('/redeem', async (req, res) => {
   try {
     const { phone, job_id, points_to_use } = req.body;
@@ -66,7 +57,6 @@ router.post('/redeem', async (req, res) => {
     if (isNaN(pts) || pts < MIN_REDEEM)
       return res.status(400).json({ error: `Minimum ${MIN_REDEEM} points required to redeem` });
 
-    // Get current balance
     const normalised = phone.replace(/\D/g, '');
     const { rows: bal } = await db.query(
       `SELECT
@@ -79,10 +69,8 @@ router.post('/redeem', async (req, res) => {
     if (pts > balance)
       return res.status(400).json({ error: `Not enough points. You have ${balance} pts` });
 
-    // Get job cost
     const { rows: jobRows } = await db.query(
-      'SELECT cost, college_id FROM jobs WHERE id = $1 LIMIT 1',
-      [job_id]
+      'SELECT cost, college_id FROM jobs WHERE id = $1 LIMIT 1', [job_id]
     );
     if (!jobRows[0]) return res.status(404).json({ error: 'Job not found' });
 
@@ -108,17 +96,17 @@ router.post('/redeem', async (req, res) => {
   }
 });
 
-// ─── POST /api/loyalty/confirm-redeem ─ deduct after payment ─
-// Called internally by payment webhook after payment.captured
 router.post('/confirm-redeem', async (req, res) => {
   try {
     const { phone, job_id, points_used, college_id } = req.body;
-    if (!phone || !job_id || !points_used) return res.status(400).json({ error: 'Missing fields' });
+    if (!phone || !job_id || !points_used)
+      return res.status(400).json({ error: 'Missing fields' });
 
     await db.query(
       `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
        VALUES ($1, $2, $3, 'redeem', $4, $5)`,
-      [phone, college_id || 'college1', job_id, points_used, `Redeemed ${points_used} pts for ₹${(points_used * POINTS_TO_RUPEES).toFixed(0)} off`]
+      [phone, college_id || 'college1', job_id, points_used,
+       `Redeemed ${points_used} pts for Rs.${(points_used * POINTS_TO_RUPEES).toFixed(0)} off`]
     );
     return res.json({ success: true });
   } catch (err) {
@@ -127,7 +115,6 @@ router.post('/confirm-redeem', async (req, res) => {
   }
 });
 
-// ─── GET /api/loyalty/admin/summary (admin) ──────────────────
 router.get('/admin/summary', auth, async (req, res) => {
   try {
     const college_id = req.admin?.college_id || 'college1';

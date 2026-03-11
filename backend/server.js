@@ -13,7 +13,6 @@ const { Server } = require("socket.io");
 const app = express();
 const httpServer = http.createServer(app);
 
-// ✅ FIX: Trust Render's proxy so rate limiter works correctly
 app.set("trust proxy", 1);
 
 const ALLOWED_ORIGINS = [
