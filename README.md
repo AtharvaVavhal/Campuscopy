@@ -1,334 +1,250 @@
-# 🖨️ CampusCopy
+<div align="center">
 
-> **A streamlined campus document printing and queue management platform.**
+```
+ ██████╗ █████╗ ███╗   ███╗██████╗ ██╗   ██╗███████╗ ██████╗ ██████╗ ██████╗ ██╗   ██╗
+██╔════╝██╔══██╗████╗ ████║██╔══██╗██║   ██║██╔════╝██╔════╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
+██║     ███████║██╔████╔██║██████╔╝██║   ██║███████╗██║     ██║   ██║██████╔╝ ╚████╔╝ 
+██║     ██╔══██║██║╚██╔╝██║██╔═══╝ ██║   ██║╚════██║██║     ██║   ██║██╔═══╝   ╚██╔╝  
+╚██████╗██║  ██║██║ ╚═╝ ██║██║     ╚██████╔╝███████║╚██████╗╚██████╔╝██║        ██║   
+ ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝      ╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝        ╚═╝  
+```
 
-![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=red)
-![Deployed on Render](https://img.shields.io/badge/Deployed-Render-46E3B7?style=for-the-badge)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+**Automated PDF Printing for College Students**  
+*Vishwakarma Institute of Technology, Pune*
 
----
+[![Live PWA](https://img.shields.io/badge/PWA-campuscopy.pages.dev-00b894?style=for-the-badge&logo=cloudflare)](https://campuscopy.pages.dev)
+[![Admin Dashboard](https://img.shields.io/badge/Dashboard-campuscopy.vercel.app-6c5ce7?style=for-the-badge&logo=vercel)](https://campuscopy.vercel.app)
+[![API](https://img.shields.io/badge/API-campuscopy--api.onrender.com-0984e3?style=for-the-badge&logo=render)](https://campuscopy-api.onrender.com/health)
+[![Made with Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js)](https://nodejs.org)
 
-## 📖 Overview
-
-**CampusCopy** modernizes the campus printing experience at **Vishwakarma Institute of Technology, Pune**. Students upload documents, pay online via Razorpay, and collect prints without standing in queues. Administrators manage the print queue in real time from a dedicated dashboard.
-
-Built and maintained by **Atharva Vavhal**, VIT Pune · 2026.
-
----
-
-## 🚀 Live URLs
-
-| Service | URL |
-|---|---|
-| Student PWA | https://campuscopy.pages.dev |
-| Admin Dashboard | https://campuscopy.vercel.app |
-| Backend API | https://campuscopy-api.onrender.com |
+</div>
 
 ---
 
-## ✨ Features
+## 🎯 What is CampusCopy?
 
-### 🎓 For Students
-- **Drag-and-drop PDF upload** with auto page count detection via PDF.js
-- **PDF preview** — see page 1 thumbnail before paying
-- **Razorpay payments** — UPI, cards, netbanking, wallets
-- **Coupon codes** — enter discount codes at checkout
-- **Real-time status tracking** via WebSocket (Socket.IO) — zero HTTP polling
-- **WhatsApp notifications** via Twilio when print is ready
-- **Order history** — look up past orders by phone number
-- **PWA** — installable, works on any browser, no app store needed
+CampusCopy eliminates the college print queue. Students upload a PDF from their phone, pay instantly via Razorpay, and collect prints without waiting. The print operator sees the job appear in real-time on the admin dashboard and processes it immediately.
 
-### 🛡️ For Administrators
-- **Live print queue** — all jobs in one view with real-time updates
-- **One-click status updates** — Paid → Queued → Printing → Done
-- **Printer management** — monitor printer health and availability
-- **Analytics** — revenue, job volume, and usage stats
-- **Coupon management** — create and track discount codes
-
----
-
-## 🛠️ Tech Stack
-
-### Backend
-- Node.js + Express
-- PostgreSQL (Database)
-- Redis via Upstash (Caching & job queue)
-- BullMQ (Background processing)
-- Socket.IO (Real-time WebSockets)
-- Twilio WhatsApp API (Notifications)
-- Razorpay (Payments)
-- Multer (File uploads)
-
-### Frontend — Student PWA
-- Vanilla HTML / CSS / JavaScript
-- PDF.js (Page detection & preview)
-- Socket.IO client (Real-time updates)
-- Progressive Web App (PWA)
-- Hosted on Cloudflare Pages
-
-### Admin Dashboard
-- React + Vite
-- TanStack Query
-- Socket.IO client
-- Hosted on Vercel
-
-### Infrastructure
-- **API:** Render (Node.js)
-- **Database:** Render PostgreSQL
-- **Cache:** Upstash Redis
-- **Student PWA:** Cloudflare Pages
-- **Admin Dashboard:** Vercel
+> Built from scratch in March 2026 by **Atharva Vavhal** · VIT Pune
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-+-------------------+     HTTP + WebSocket      +------------------+
-|   Student PWA     | ─────────────────────────▶|                  |
-|  (HTML/JS/PWA)    | ◀─────────────────────────|   Node.js API    |
-+-------------------+   Real-time job_update    |  (Express.js)    |
-                                                 |                  |
-+-------------------+     HTTP + WebSocket      |                  |
-| Admin Dashboard   | ─────────────────────────▶|                  |
-|  (React + Vite)   | ◀─────────────────────────|                  |
-+-------------------+  Real-time queue_update   +------------------+
-                                                   |      |      |
-              +------------------------------------+      |      +--------+
-              |                                          |               |
-     +----------------+                        +---------------+   +---------+
-     |   PostgreSQL   |                        | Redis/Upstash |   | Twilio  |
-     | (jobs, users,  |                        | (cache, queue)|   | WA API  |
-     |  printers,     |                        +---------------+   +---------+
-     |  coupons)      |
-     +----------------+
+┌─────────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
+│   Student PWA        │     │    Node.js API        │     │   Admin Dashboard   │
+│  campuscopy.pages.dev│────▶│ campuscopy-api.onrender│────▶│campuscopy.vercel.app│
+│  Cloudflare Pages    │     │    Express + Socket.IO │     │   React + Vite      │
+└─────────────────────┘     └──────────┬───────────┘     └─────────────────────┘
+                                        │
+                    ┌───────────────────┼───────────────────┐
+                    ▼                   ▼                   ▼
+             ┌──────────┐       ┌──────────────┐    ┌──────────────┐
+             │PostgreSQL │       │    Redis      │    │Print Bridge  │
+             │ Render DB │       │   Upstash     │    │ Python + GUI │
+             └──────────┘       └──────────────┘    └──────────────┘
 ```
 
 ---
 
-## 📂 Project Structure
+## ✅ Implementation Progress
+
+### Phase 1 — Core UX *(Week 1-2)*
+
+| Feature | Status | Notes |
+|---|---|---|
+| WhatsApp notifications via Twilio | ✅ **Done** | Sends on `printing`, `done`, `failed` |
+| Real-time job status via Socket.IO | ✅ **Done** | Admin dashboard updates instantly |
+| Admin login & auth | ✅ **Done** | JWT-based, bcrypt hashed |
+| Phone number capture on upload | ✅ **Done** | Stored in `jobs.phone_number` |
+| PDF preview before payment | ⬜ Pending | PDF.js already loaded, needs canvas render |
+| Order history by phone number | ⬜ Pending | Backend route exists, needs frontend page |
+| Push notifications (browser) | 🟡 Partial | VAPID keys configured, testing pending |
+
+### Phase 2 — Business Features *(Week 2-3)*
+
+| Feature | Status | Notes |
+|---|---|---|
+| Coupon system DB schema | ✅ **Done** | `coupons` + `coupon_uses` tables created |
+| Loyalty points DB schema | ✅ **Done** | `loyalty_transactions` + `loyalty_points` |
+| Coupon validate/apply API | 🟡 Partial | Routes exist, needs end-to-end testing |
+| Loyalty points earn/redeem | 🟡 Partial | Routes exist, needs end-to-end testing |
+| Priority queue (⚡ badge) | ✅ **Done** | UI + sorting implemented in dashboard |
+| Razorpay payments | 🟡 Partial | Working, needs domain whitelist in Razorpay |
+
+### Phase 3 — Platform Scale *(Week 3-5)*
+
+| Feature | Status | Notes |
+|---|---|---|
+| Multi-college SaaS architecture | ⬜ Pending | `college_id` column exists on all tables |
+| College onboarding flow | ⬜ Pending | `/signup` page not built yet |
+| Per-college Razorpay accounts | ⬜ Pending | Needs marketplace/route setup |
+| Platform fee % per transaction | ⬜ Pending | Column planned, not implemented |
+| Admin settings page | ⬜ Pending | Branding, Razorpay keys per college |
+
+### Phase 4 — Technical Polish *(Week 5-6)*
+
+| Feature | Status | Notes |
+|---|---|---|
+| Push notifications end-to-end | 🟡 Partial | VAPID configured, subscription saving TBD |
+| Print bridge GUI | ⬜ Pending | Currently CLI only, operator-unfriendly |
+| Offline PWA support | ⬜ Pending | Service worker needs cache strategy |
+| PDF preview (Phase 1 carry-over) | ⬜ Pending | — |
+
+---
+
+## 📊 Progress Summary
 
 ```
-CampusCopy/
-├── backend/
-│   ├── config/
-│   │   ├── db.js               # PostgreSQL connection
-│   │   └── redis.js            # Redis/Upstash connection
-│   ├── controllers/
-│   │   └── paymentController.js
-│   ├── middleware/
-│   │   └── auth.js             # JWT auth middleware
-│   ├── models/
-│   │   ├── coupon.js
-│   │   └── job.js
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── coupons.js
-│   │   ├── jobs.js             # Print job lifecycle + socket emit + WhatsApp
-│   │   ├── payments.js         # Razorpay order creation + webhook
-│   │   └── printers.js
-│   ├── utils/
-│   │   ├── razorpay.js
-│   │   └── whatsapp.js         # Twilio WhatsApp notifications
-│   ├── uploads/                # Uploaded files (gitignored)
-│   └── server.js               # Express + Socket.IO setup
-├── frontend-pwa/
-│   ├── app.html                # Main student app (all screens)
-│   ├── app.js                  # Legacy (superseded by inline script)
-│   ├── manifest.json           # PWA manifest
-│   └── sw.js                   # Service worker
-├── admin-dashboard/
-│   ├── src/
-│   │   ├── api/client.js       # Axios instance
-│   │   ├── components/Layout.jsx
-│   │   ├── pages/
-│   │   │   ├── JobQueuePage.jsx
-│   │   │   ├── AnalyticsPage.jsx
-│   │   │   ├── PrintersPage.jsx
-│   │   │   └── LoginPage.jsx
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── package.json
-├── print-bridge/               # Python print bridge (local printer)
-├── .env                        # Environment variables (gitignored)
-├── .gitignore
-└── README.md
+Phase 1  ████████████░░░░  70% complete
+Phase 2  ████████░░░░░░░░  45% complete  
+Phase 3  ██░░░░░░░░░░░░░░  10% complete
+Phase 4  ████░░░░░░░░░░░░  20% complete
+
+Overall  ██████░░░░░░░░░░  36% complete
 ```
 
 ---
 
-## ⚙️ Environment Variables
+## 🚀 Tech Stack
 
-Create a `.env` file in `backend/`:
+| Layer | Technology |
+|---|---|
+| **API** | Node.js, Express, Socket.IO |
+| **Database** | PostgreSQL (Render) |
+| **Cache** | Redis (Upstash) |
+| **Student PWA** | Vanilla JS, PDF.js, Cloudflare Pages |
+| **Admin Dashboard** | React, Vite, TanStack Query, Vercel |
+| **Payments** | Razorpay |
+| **WhatsApp** | Twilio Sandbox |
+| **Push Notifications** | Web Push (VAPID) |
+| **File Storage** | Render Disk (ephemeral) |
+| **Print Bridge** | Python |
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL
+- Redis
+- Twilio account
+- Razorpay account
+
+### Environment Variables
 
 ```env
-# Server
-PORT=5000
-NODE_ENV=development
-
 # Database
-DATABASE_URL=postgres://user:password@localhost:5432/campuscopy
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=campuscopy
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_SSL=false
+DATABASE_URL=postgresql://...
 
 # Redis
-REDIS_URL=rediss://default:password@your-upstash-url:6379
+REDIS_URL=redis://...
 
 # Auth
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=7d
 
 # Razorpay
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=your_key_secret
-RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
-
-# File Upload
-MULTER_DEST=./uploads
-MAX_FILE_SIZE_MB=20
+RAZORPAY_KEY_ID=rzp_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_WEBHOOK_SECRET=...
 
 # Twilio WhatsApp
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
 TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
 
-# CORS
-STUDENT_PWA_URL=http://localhost:3000
-ADMIN_DASHBOARD_URL=http://localhost:5173
+# Push Notifications
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_EMAIL=admin@campuscopy.in
+
+# Render
+RENDER_EXTERNAL_URL=https://campuscopy-api.onrender.com
+NODE_ENV=production
 ```
 
----
-
-## 🚀 Local Setup
-
-### Prerequisites
-- Node.js v18+
-- PostgreSQL
-- Redis (or Upstash account)
-
-### Steps
+### Run Locally
 
 ```bash
-# 1. Clone
-git clone https://github.com/AtharvaVavhal/Campuscopy.git
-cd CampusCopy
+# Install dependencies
+cd backend && npm install
 
-# 2. Install backend dependencies
-cd backend
-npm install
-
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env with your credentials
-
-# 4. Start backend
+# Start API
 node server.js
 
-# 5. Open student PWA
-# Open frontend-pwa/app.html in browser or serve with:
-npx serve frontend-pwa -p 3000
-
-# 6. Start admin dashboard
-cd admin-dashboard
-npm install
-npm run dev
+# Start admin dashboard
+cd admin-dashboard && npm install && npm run dev
 ```
 
 ---
 
-## 🔄 Print Job Flow
+## 🗺️ API Reference
 
-```
-Student uploads PDF
-        ↓
-Job created (status: pending)
-        ↓
-Razorpay payment
-        ↓
-Webhook → status: paid
-        ↓
-Admin: → Queue (status: queued)
-        ↓
-Admin: → Print (status: printing) ──→ WhatsApp: "Your file is printing"
-        ↓
-Admin: ✓ Done  (status: done)    ──→ WhatsApp: "Ready for pickup!"
-        ↓
-Student shows Job ID at counter
-```
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Admin login |
+| `POST` | `/api/jobs/upload` | Upload PDF + create job |
+| `GET` | `/api/jobs` | List all jobs (admin) |
+| `PATCH` | `/api/jobs/:id/status` | Update job status |
+| `GET` | `/api/jobs/by-phone/:phone` | Order history |
+| `POST` | `/api/payments/create-order` | Create Razorpay order |
+| `POST` | `/api/payments/webhook` | Razorpay webhook |
+| `POST` | `/api/coupons/validate` | Validate coupon code |
+| `GET` | `/api/loyalty/:phone` | Get loyalty points |
+| `GET` | `/health` | Health check |
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 Real-time Events (Socket.IO)
 
-### Jobs
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/jobs/upload` | No | Upload file, create job |
-| GET | `/api/jobs/:id` | No | Get job status |
-| GET | `/api/jobs/by-phone/:phone` | No | Order history |
-| GET | `/api/jobs` | Admin | List all jobs |
-| PATCH | `/api/jobs/:id/status` | Admin | Update status + emit socket + WhatsApp |
-
-### Payments
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/payments/create-order` | No | Create Razorpay order |
-| POST | `/api/payments/webhook` | No | Razorpay webhook handler |
-
-### Coupons
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/coupons/validate` | No | Validate coupon code |
-| POST | `/api/coupons` | Admin | Create coupon |
-| GET | `/api/coupons` | Admin | List all coupons |
-
-### Printers
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/printers` | No | List available printers |
+| Event | Direction | Description |
+|---|---|---|
+| `join_printer` | Client → Server | Join printer room for updates |
+| `join_job` | Client → Server | Join job room for status |
+| `queue_update` | Server → Client | New job added to queue |
+| `job_updated` | Server → Client | Job status changed (printer room) |
+| `job_status` | Server → Client | Job status changed (student room) |
 
 ---
 
-## 🔮 Roadmap
+## 🔜 What's Next
 
-### ✅ Phase 1 — Core UX (Complete)
-- [x] WhatsApp notifications via Twilio
-- [x] PDF preview before payment
-- [x] Phone number capture
-- [x] Order history by phone
-- [x] Socket-first real-time updates (zero polling)
+**Immediate priorities:**
+1. ✅ Fix WhatsApp `+91` country code — *done today*
+2. 🔲 Whitelist `campuscopy.pages.dev` in Razorpay dashboard
+3. 🔲 Test full payment flow end-to-end
+4. 🔲 PDF preview on upload screen
+5. 🔲 Test push notifications after payment
 
-### 🔄 Phase 2 — Business Features (In Progress)
-- [ ] Coupon codes with admin management
-- [ ] Loyalty points (10 prints = 1 free page)
-- [ ] Print page range selection
-- [ ] Priority queue (pay ₹5 to jump queue)
-
-### 📅 Phase 3 — Multi-College SaaS
-- [ ] Any print shop can sign up and get own dashboard
-- [ ] Shop registration landing page
-- [ ] Revenue analytics
-- [ ] Platform fee system (2-5% per transaction)
-
-### 🔧 Phase 4 — Technical Polish
-- [ ] Browser push notifications (VAPID)
-- [ ] Print bridge desktop GUI (Tkinter)
-- [ ] Offline PWA support
-- [ ] Scheduled printing
+**Then Phase 3:**
+- Multi-college onboarding
+- Per-college Razorpay routing
+- Platform fee collection
 
 ---
 
-## 📄 License
+## 📈 Revenue Model
 
-MIT License — see [LICENSE](LICENSE) for details.
+| Model | Revenue |
+|---|---|
+| Single college (current) | ₹15,000–₹30,000/month |
+| SaaS — 5 colleges | ₹45,000/month platform fees |
+| Transaction fee (3%) | ₹1,350–₹9,000/month passive |
+| Priority queue premium | ₹5,000/month additional |
 
 ---
 
-*CampusCopy · Vishwakarma Institute of Technology, Pune · Atharva Vavhal · 2026*
+## 👨‍💻 Author
+
+**Atharva Vavhal**  
+Vishwakarma Institute of Technology, Pune  
+March 2026
+
+---
+
+<div align="center">
+<sub>Built with ☕ and too many Render deploys</sub>
+</div>
