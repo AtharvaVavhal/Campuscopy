@@ -26,36 +26,45 @@ const upload = multer({
 });
 
 // ─── POST /api/jobs/upload ────────────────────────────────────────────────────
+// ─── POST /api/jobs/upload ────────────────────────────────────────────────────
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     const {
       printer_id,
       pages,
-      copies      = 1,
-      color       = false,
+      copies = 1,
+      color = false,
       double_sided = false,
-      phone       = "",
+      phone = "",
+      priority = false
     } = req.body;
 
     if (!req.file)   return res.status(400).json({ error: "No file uploaded" });
     if (!printer_id) return res.status(400).json({ error: "No printer selected" });
 
-    const pricePerPage = color === "true" ? 5 : 1;
-    const multiplier   = double_sided === "true" ? 0.8 : 1;
+    // convert string values to boolean
+    const isColor = color === "true" || color === true;
+    const isDoubleSided = double_sided === "true" || double_sided === true;
+    const isPriority = priority === "true" || priority === true;
+
+    const pricePerPage = isColor ? 5 : 1;
+    const multiplier   = isDoubleSided ? 0.8 : 1;
     const cost         = (parseInt(pages) * parseInt(copies) * pricePerPage * multiplier).toFixed(2);
 
-    // Look up college_id from the printer so we don't need it in the request
+    // Look up college_id from the printer
     const printerRow = await db.query(
       "SELECT college_id FROM printers WHERE id = $1",
       [printer_id]
     );
+
     const college_id = printerRow.rows[0]?.college_id || null;
 
     const jobId = uuidv4();
+
     const result = await db.query(
       `INSERT INTO jobs
-         (id, college_id, printer_id, file_name, pages, copies, color, double_sided, cost, status, phone_number, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,NOW(),NOW())
+       (id, college_id, printer_id, file_name, pages, copies, color, double_sided, cost, priority, status, phone_number, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11,NOW(),NOW())
        RETURNING *`,
       [
         jobId,
@@ -64,14 +73,16 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         req.file.originalname,
         parseInt(pages),
         parseInt(copies),
-        color === "true",
-        double_sided === "true",
+        isColor,
+        isDoubleSided,
         cost,
+        isPriority,
         phone.trim() || null,
       ]
     );
 
     res.status(201).json({ job: result.rows[0] });
+
   } catch (err) {
     console.error("Job creation error:", err);
     res.status(500).json({ error: "Failed to create job" });
@@ -120,7 +131,8 @@ router.get("/", authMiddleware, async (req, res) => {
       `SELECT j.*, p.name AS printer_name
        FROM jobs j
        LEFT JOIN printers p ON p.id = j.printer_id
-       ORDER BY j.created_at DESC LIMIT 100`
+       ORDER BY j.priority DESC, j.created_at ASC
+ LIMIT 100`
     );
     res.json({ jobs: result.rows });
   } catch (err) {
@@ -163,6 +175,7 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
     console.error("Status update error:", err);
     res.status(500).json({ error: "Failed to update status" });
   }
+  
 });
 
 module.exports = router;
