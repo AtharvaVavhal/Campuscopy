@@ -583,13 +583,61 @@ async function doPayment() {
 }
 
 // ─── Status ───────────────────────────────────────────────────
+let pollTimer = null;
+
+function startFallbackPoll() {
+  if (pollTimer) return; // already polling
+  pollTimer = setInterval(async () => {
+    if (!job) return;
+    try {
+      const r = await fetch(API + '/api/jobs/' + job.id);
+      const d = await r.json();
+      if (d.job) setStatus(d.job.status);
+    } catch {}
+  }, 5000);
+}
+
+function stopFallbackPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
 function showStatus() {
   goScreen('status');
+
+  // Fetch current state immediately so UI isn't blank
+  fetch(API + '/api/jobs/' + job.id)
+    .then(r => r.json())
+    .then(d => { if (d.job) setStatus(d.job.status); })
+    .catch(() => {});
+
+  // Connect socket
   if (socket) socket.disconnect();
-  socket = io(API);
-  socket.emit('join_job', job.id);
-  socket.on('job_status', d => setStatus(d.status));
-  pollStatus();
+  socket = io(API, { transports: ['websocket', 'polling'] });
+
+  socket.on('connect', () => {
+    socket.emit('join_job', job.id); // join this job's room
+    stopFallbackPoll(); // socket is up — no need to poll
+  });
+
+  // ✅ Listen for 'job_update' (emitted by backend on status change)
+  socket.on('job_update', d => {
+    if (d.id === job.id) {
+      setStatus(d.status);
+      if (d.status === 'done' || d.status === 'cancelled') {
+        stopFallbackPoll();
+        socket.disconnect();
+      }
+    }
+  });
+
+  socket.on('disconnect', () => {
+    startFallbackPoll(); // socket dropped — fall back to polling
+  });
+
+  socket.on('reconnect', () => {
+    socket.emit('join_job', job.id); // re-join room after reconnect
+    stopFallbackPoll(); // socket healthy again
+  });
 }
 
 const SCFG = {
@@ -625,11 +673,8 @@ function setStatus(status) {
   }
 }
 
-async function pollStatus() {
-  if (!job) return;
-  try { const r=await fetch(API+'/api/jobs/'+job.id); const d=await r.json(); if(d.job) setStatus(d.job.status); } catch {}
-  setTimeout(pollStatus, 5000);
-}
+// pollStatus removed — status updates now come via socket 'job_update' event.
+// HTTP polling only runs as a fallback if the socket disconnects (see startFallbackPoll).
 
 // ─── Confetti ─────────────────────────────────────────────────
 function confetti() {

@@ -61,3 +61,4 @@ const Job = {
 };
 
 module.exports = Job;
+
