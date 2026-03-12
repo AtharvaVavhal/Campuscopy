@@ -1,11 +1,9 @@
-const CACHE_NAME = 'campuscopy-v2';
-const ASSETS = ['/', '/index.html', '/app.js', '/manifest.json'];
-
+const CACHE_NAME = 'campuscopy-v3';
+const ASSETS = ['/app.html', '/app.js', '/manifest.json'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
   self.skipWaiting();
 });
-
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -14,18 +12,16 @@ self.addEventListener('activate', (e) => {
   );
   self.clients.claim();
 });
-
 self.addEventListener('fetch', (e) => {
   if (e.request.url.includes('/api/')) return;
+  // Don't cache root — let index.html redirect work
+  if (new URL(e.request.url).pathname === '/') return;
   e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request)));
 });
-
-// ── Push: show notification when backend sends one ────────────
 self.addEventListener('push', (e) => {
   if (!e.data) return;
   let data;
   try { data = e.data.json(); } catch { data = { title: 'CampusCopy', body: e.data.text() }; }
-
   e.waitUntil(
     self.registration.showNotification(data.title || 'CampusCopy', {
       body:    data.body || 'Your print job has been updated.',
@@ -37,8 +33,6 @@ self.addEventListener('push', (e) => {
     })
   );
 });
-
-// ── Notification click: open/focus the app ────────────────────
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   if (e.action === 'dismiss') return;
