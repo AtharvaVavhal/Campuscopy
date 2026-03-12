@@ -58,9 +58,9 @@ CampusCopy eliminates the college print queue. Students upload a PDF from their 
 | Real-time job status via Socket.IO | ✅ **Done** | Admin dashboard updates instantly |
 | Admin login & auth | ✅ **Done** | JWT-based, bcrypt hashed |
 | Phone number capture on upload | ✅ **Done** | Stored in `jobs.phone_number` |
-| PDF preview before payment | ⬜ Pending | PDF.js already loaded, needs canvas render |
-| Order history by phone number | ⬜ Pending | Backend route exists, needs frontend page |
-| Push notifications (browser) | 🟡 Partial | VAPID keys configured, testing pending |
+| PDF preview before payment | ✅ **Done** | PDF.js canvas render + page navigation |
+| Order history by phone number | ✅ **Done** | Full UI with styled job cards |
+| Push notifications (browser) | ✅ **Done** | VAPID keys set, SW live, subscribe on payment |
 
 ### Phase 2 — Business Features *(Week 2-3)*
 
@@ -68,7 +68,8 @@ CampusCopy eliminates the college print queue. Students upload a PDF from their 
 |---|---|---|
 | Coupon system DB schema | ✅ **Done** | `coupons` + `coupon_uses` tables created |
 | Loyalty points DB schema | ✅ **Done** | `loyalty_transactions` + `loyalty_points` |
-| Coupon validate/apply API | 🟡 Partial | Routes exist, needs end-to-end testing |
+| Coupon validate/apply API | ✅ **Done** | Routes tested, admin UI built |
+| Coupon admin page | ✅ **Done** | Create, test, list coupons in dashboard |
 | Loyalty points earn/redeem | 🟡 Partial | Routes exist, needs end-to-end testing |
 | Priority queue (⚡ badge) | ✅ **Done** | UI + sorting implemented in dashboard |
 | Razorpay payments | 🟡 Partial | Working, needs domain whitelist in Razorpay |
@@ -87,22 +88,21 @@ CampusCopy eliminates the college print queue. Students upload a PDF from their 
 
 | Feature | Status | Notes |
 |---|---|---|
-| Push notifications end-to-end | 🟡 Partial | VAPID configured, subscription saving TBD |
-| Print bridge GUI | ⬜ Pending | Currently CLI only, operator-unfriendly |
+| Push notifications end-to-end | ✅ **Done** | VAPID live on Render, icons added to PWA |
+| Print bridge GUI | ✅ **Done** | Dark themed tkinter GUI, Online/Offline status |
 | Offline PWA support | ⬜ Pending | Service worker needs cache strategy |
-| PDF preview (Phase 1 carry-over) | ⬜ Pending | — |
 
 ---
 
 ## 📊 Progress Summary
 
 ```
-Phase 1  ████████████░░░░  70% complete
-Phase 2  ████████░░░░░░░░  45% complete  
-Phase 3  ██░░░░░░░░░░░░░░  10% complete
-Phase 4  ████░░░░░░░░░░░░  20% complete
+Phase 1  ████████████████  100% complete ✅
+Phase 2  ████████████░░░░   75% complete
+Phase 3  ██░░░░░░░░░░░░░░   10% complete
+Phase 4  ████████████░░░░   75% complete
 
-Overall  ██████░░░░░░░░░░  36% complete
+Overall  ██████████░░░░░░   65% complete
 ```
 
 ---
@@ -120,7 +120,7 @@ Overall  ██████░░░░░░░░░░  36% complete
 | **WhatsApp** | Twilio Sandbox |
 | **Push Notifications** | Web Push (VAPID) |
 | **File Storage** | Render Disk (ephemeral) |
-| **Print Bridge** | Python |
+| **Print Bridge** | Python + tkinter GUI |
 
 ---
 
@@ -177,6 +177,9 @@ node server.js
 
 # Start admin dashboard
 cd admin-dashboard && npm install && npm run dev
+
+# Start print bridge GUI
+cd print-bridge && python3 bridge_gui.py
 ```
 
 ---
@@ -190,10 +193,13 @@ cd admin-dashboard && npm install && npm run dev
 | `GET` | `/api/jobs` | List all jobs (admin) |
 | `PATCH` | `/api/jobs/:id/status` | Update job status |
 | `GET` | `/api/jobs/by-phone/:phone` | Order history |
+| `GET` | `/api/jobs/printer/:id` | Jobs for print bridge |
 | `POST` | `/api/payments/create-order` | Create Razorpay order |
 | `POST` | `/api/payments/webhook` | Razorpay webhook |
 | `POST` | `/api/coupons/validate` | Validate coupon code |
+| `POST` | `/api/coupons` | Create coupon (admin) |
 | `GET` | `/api/loyalty/:phone` | Get loyalty points |
+| `POST` | `/api/push/subscribe` | Save push subscription |
 | `GET` | `/health` | Health check |
 
 ---
@@ -213,11 +219,12 @@ cd admin-dashboard && npm install && npm run dev
 ## 🔜 What's Next
 
 **Immediate priorities:**
-1. ✅ Fix WhatsApp `+91` country code — *done today*
-2. 🔲 Whitelist `campuscopy.pages.dev` in Razorpay dashboard
-3. 🔲 Test full payment flow end-to-end
-4. 🔲 PDF preview on upload screen
-5. 🔲 Test push notifications after payment
+1. ✅ Push notifications — *done*
+2. ✅ PDF preview — *done*
+3. ✅ Coupon admin UI — *done*
+4. ✅ Print bridge GUI — *done*
+5. 🔲 Whitelist `campuscopy.pages.dev` in Razorpay dashboard
+6. 🔲 Test full payment flow end-to-end
 
 **Then Phase 3:**
 - Multi-college onboarding
