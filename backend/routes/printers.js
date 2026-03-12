@@ -102,3 +102,6 @@ router.post('/:id/heartbeat', bridgeAuth, async (req, res) => {
 });
 
 // ── Public — get job by QR token ─────────────────────────────
+// (handled in routes/jobs.js via /api/jobs/qr/:token)
+
+module.exports = router;
