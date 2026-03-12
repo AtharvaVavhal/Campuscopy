@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import JobQueuePage from './pages/JobQueuePage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PrintersPage from './pages/PrintersPage';
+import CouponsPage from './pages/CouponsPage';
 import Layout from './components/Layout';
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="jobs" element={<JobQueuePage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="printers" element={<PrintersPage />} />
+            <Route path="coupons" element={<CouponsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

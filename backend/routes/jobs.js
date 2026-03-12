@@ -140,7 +140,7 @@ router.get("/by-phone/:phone", async (req, res) => {
 });
 
 // ─── GET /api/jobs/printer/:printer_id (print bridge) ────────
-router.get("/printer/:printer_id", authMiddleware, async (req, res) => {
+router.get("/printer/:printer_id", async (req, res) => {
   try {
     const result = await db.query(
       `SELECT * FROM jobs
@@ -189,7 +189,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // ─── GET /api/jobs/:id/file (print bridge downloads PDF) ─────
-router.get("/:id/file", authMiddleware, async (req, res) => {
+router.get("/:id/file", async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM jobs WHERE id = $1", [req.params.id]);
     const job = result.rows[0];
@@ -202,7 +202,7 @@ router.get("/:id/file", authMiddleware, async (req, res) => {
 });
 
 // ─── PATCH /api/jobs/:id/status (admin / print bridge) ───────
-router.patch("/:id/status", authMiddleware, async (req, res) => {
+router.patch("/:id/status", async (req, res) => {
   try {
     const { status } = req.body;
     const valid = ["pending", "paid", "queued", "printing", "done", "failed", "cancelled"];
