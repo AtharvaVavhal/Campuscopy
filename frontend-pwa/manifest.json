@@ -2,7 +2,7 @@
   "name": "CampusCopy",
   "short_name": "CampusCopy",
   "description": "Upload, pay and collect prints instantly",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#f5f5f5",
   "theme_color": "#6366f1",
