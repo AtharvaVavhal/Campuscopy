@@ -246,8 +246,27 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
 .inline-btn{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:12px;padding:12px 18px;color:var(--violet);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;}
 .inline-btn:hover{background:rgba(167,139,250,0.2);border-color:rgba(167,139,250,0.4);}
 </style>
+
+  /* ── Offline banner ── */
+  #offline-banner {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 9999;
+    background: #f59e0b;
+    color: #1a1a2e;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  #offline-banner.show { display: block; }
+  body.offline-mode { padding-top: 40px; }
 </head>
 <body>
+
+<div id="offline-banner">⚡ You're offline — showing cached data. Reconnect to get live updates.</div>
 <div class="bg-orb orb-a"></div>
 <div class="bg-orb orb-b"></div>
 
@@ -1004,6 +1023,45 @@ function updateLoyaltyDiscount() {
 }
 
 loadPrinters();
+</script>
+
+<script>
+// ─── Offline / Online detection ───────────────────────────────
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+    document.body.classList.add('offline-mode');
+  } else {
+    banner.classList.remove('show');
+    document.body.classList.remove('offline-mode');
+    // Tell SW to trigger background sync
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'REGISTER_SYNC' });
+    }
+  }
+}
+
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus(); // check on load
+
+// ─── Handle SW messages ───────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type === 'SYNC_ONLINE') {
+      // Connection restored — refresh job status if on status screen
+      const statusScreen = document.getElementById('screen-status');
+      if (statusScreen && statusScreen.style.display !== 'none') {
+        const jobId = window._currentJobId;
+        if (jobId) pollStatus(jobId);
+      }
+    }
+    if (e.data?.type === 'NAVIGATE') {
+      window.location.href = e.data.url;
+    }
+  });
+}
 </script>
 </body>
 </html>
