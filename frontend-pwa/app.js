@@ -43,7 +43,6 @@ async function onFileSelect(input) {
     document.getElementById('upload-btn').disabled = true;
 
     try {
-      // Auto-count pages using PDF.js
       const arrayBuffer = await file.arrayBuffer();
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -116,7 +115,6 @@ async function uploadFile() {
 
     currentJob = data.job;
 
-    // Fill payment screen
     document.getElementById('pay-filename').textContent = currentJob.file_name;
     document.getElementById('pay-pages').textContent = currentJob.pages;
     document.getElementById('pay-copies').textContent = currentJob.copies;
@@ -129,6 +127,57 @@ async function uploadFile() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = 'Upload & Continue';
+  }
+}
+
+// ─── Push Notifications ───────────────────────────────────────
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function subscribeToPush(jobId) {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.log('[push] Not supported in this browser');
+      return;
+    }
+
+    // Get VAPID public key from server
+    const keyRes = await fetch(API + '/api/push/vapid-public-key');
+    if (!keyRes.ok) return;
+    const { publicKey } = await keyRes.json();
+
+    // Register service worker if not already registered
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('[push] Permission denied');
+      return;
+    }
+
+    // Subscribe
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    // Send subscription to backend linked to this job
+    await fetch(API + '/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId, subscription }),
+    });
+
+    console.log('[push] Subscribed successfully for job', jobId);
+  } catch (err) {
+    console.error('[push] Subscription failed:', err);
   }
 }
 
@@ -154,8 +203,10 @@ async function startPayment() {
       order_id: order.order_id,
       name: 'CampusCopy',
       description: 'Print Job Payment',
-      handler: function(response) {
+      handler: async function(response) {
         showToast('Payment successful!');
+        // Subscribe to push notifications after successful payment
+        await subscribeToPush(currentJob.id);
         showStatusScreen();
       },
       prefill: { name: 'Student' },
@@ -187,21 +238,21 @@ function showStatusScreen() {
 function updateStatusUI(status) {
   const icons = { pending: '⏳', paid: '💰', queued: '📋', printing: '🖨️', done: '✅', failed: '❌' };
   const texts = { pending: 'Awaiting Payment', paid: 'Payment Confirmed', queued: 'In Queue', printing: 'Printing Now...', done: 'Ready for Pickup', failed: 'Print Failed' };
-  const subs = { pending: 'Complete payment to proceed', paid: 'Your job is queued shortly', queued: 'Waiting for printer', printing: 'Please wait...', done: 'Show QR code at counter', failed: 'Please try again' };
+  const subs  = { pending: 'Complete payment to proceed', paid: 'Your job is queued shortly', queued: 'Waiting for printer', printing: 'Please wait...', done: 'Show QR code at counter', failed: 'Please try again' };
 
   document.getElementById('status-icon').textContent = icons[status] || '⏳';
   document.getElementById('status-text').textContent = texts[status] || status;
-  document.getElementById('status-sub').textContent = subs[status] || '';
-  document.getElementById('status-badge').textContent = status;
-  document.getElementById('status-badge').className = 'status-badge badge-' + status;
+  document.getElementById('status-sub').textContent  = subs[status]  || '';
+  document.getElementById('status-badge').textContent  = status;
+  document.getElementById('status-badge').className    = 'status-badge badge-' + status;
 
   const steps = ['paid', 'queued', 'printing', 'done'];
   const idx = steps.indexOf(status);
   steps.forEach((s, i) => {
     const dot = document.getElementById('step-' + s);
-    if (i < idx) { dot.className = 'step-dot done'; dot.textContent = '✓'; }
-    else if (i === idx) { dot.className = 'step-dot active'; dot.textContent = i + 1; }
-    else { dot.className = 'step-dot'; dot.textContent = i + 1; }
+    if (i < idx)      { dot.className = 'step-dot done';   dot.textContent = '✓'; }
+    else if (i === idx){ dot.className = 'step-dot active'; dot.textContent = i + 1; }
+    else               { dot.className = 'step-dot';        dot.textContent = i + 1; }
   });
 
   if (status === 'done' && currentJob && currentJob.qr_code) {
@@ -223,7 +274,7 @@ function connectSocket() {
   if (socket) socket.disconnect();
   socket = io(API);
   socket.emit('join_job', currentJob.id);
-  socket.on('job_status', (data) => {
+  socket.on('job_update', (data) => {
     updateStatusUI(data.status);
     if (data.status === 'done') showToast('Your print is ready for pickup!');
   });
@@ -250,7 +301,7 @@ function scanFrame() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    const code = (typeof jsQR === 'function') ? jsQR(imageData.data, imageData.width, imageData.height) : null;
     if (code) {
       stopScanner();
       verifyQR(code.data);
@@ -271,11 +322,21 @@ async function verifyQR(token) {
   const result = document.getElementById('scan-result');
   result.style.display = 'block';
   result.innerHTML = '<p>Verifying...</p>';
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   try {
     const res = await fetch(API + '/api/jobs/qr/' + token);
     const data = await res.json();
     if (data.job) {
-      result.innerHTML = '<p style="font-weight:600;color:#059669;">✅ ' + data.job.file_name + '</p><p style="font-size:13px;color:#666;margin-top:4px;">Status: ' + data.job.status + ' · ₹' + data.job.cost + '</p>';
+      result.innerHTML = '<p style="font-weight:600;color:#059669;">✅ ' + escapeHtml(data.job.file_name) + '</p><p style="font-size:13px;color:#666;margin-top:4px;">Status: ' + escapeHtml(data.job.status) + ' · ₹' + escapeHtml(data.job.cost) + '</p>';
     } else {
       result.innerHTML = '<p style="color:#dc2626;">❌ Invalid QR code</p>';
     }

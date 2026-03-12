@@ -11,7 +11,7 @@ const S = {
   label:   { fontSize: 11, fontWeight: 700, color: 'rgba(238,238,245,0.35)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 8, display: 'block' },
   input:   { width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: '#eeeef5', fontFamily: "'Plus Jakarta Sans', sans-serif", outline: 'none' },
   select:  { width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: '#eeeef5', fontFamily: "'Plus Jakarta Sans', sans-serif", outline: 'none' },
-  btn:     { background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', border: 'none', borderRadius: 10, padding: '12px 28px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif', letterSpacing: 0.5", marginTop: 8 },
+  btn:     { background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', border: 'none', borderRadius: 10, padding: '12px 28px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: 0.5, marginTop: 8 },
   row2:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
   field:   { marginBottom: 16 },
   msg:     { fontSize: 12, marginTop: 8, fontWeight: 600 },

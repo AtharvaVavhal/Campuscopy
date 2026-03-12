@@ -63,9 +63,9 @@ function PrinterCard({ printer }) {
       </div>
 
       <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 12px' }}>
-        <div style={{ fontSize: 10, color: 'rgba(238,238,245,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>API Key</div>
+        <div style={{ fontSize: 10, color: 'rgba(238,238,245,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Printer ID</div>
         <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(238,238,245,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {printer.api_key ? printer.api_key.substring(0, 12) + '••••••••' : '—'}
+          {printer.id}
         </div>
       </div>
     </div>

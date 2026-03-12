@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import api from '../api/client';
 
-const PRINTER_ID = '5b4bedf3-3550-4faa-ac3d-d4f490772258';
-
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -41,7 +39,7 @@ function StatCard({ label, value, icon, color, sub }) {
 export default function AnalyticsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['analytics'],
-    queryFn: () => api.get(`/api/jobs/printer/${PRINTER_ID}`).then(r => r.data),
+    queryFn: () => api.get('/api/jobs').then(r => r.data),
     refetchInterval: 30000,
   });
 
