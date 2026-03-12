@@ -1,8 +1,450 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta http-equiv="refresh" content="0; url=/app">
-  <script>window.location.replace('/app');</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CampusCopy — Print in 60 Seconds</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060608"/>
+<meta name="description" content="Upload a PDF, pay instantly, collect your prints. No queue. No waiting. CampusCopy at VIT Pune."/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#060608;
+  --ink2:#0d0d14;
+  --surface:rgba(255,255,255,0.04);
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.12);
+  --violet:#a78bfa;
+  --violet2:#7c3aed;
+  --emerald:#34d399;
+  --amber:#f59e0b;
+  --coral:#fb923c;
+  --text:#f0f0f8;
+  --muted:rgba(240,240,248,0.45);
+  --muted2:rgba(240,240,248,0.25);
+}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;overflow-x:hidden;cursor:none;}
+
+/* Custom cursor */
+.cursor{position:fixed;width:8px;height:8px;background:var(--violet);border-radius:50%;pointer-events:none;z-index:9999;transition:transform 0.1s;mix-blend-mode:screen;}
+.cursor-ring{position:fixed;width:32px;height:32px;border:1px solid rgba(167,139,250,0.4);border-radius:50%;pointer-events:none;z-index:9998;transition:all 0.15s ease;mix-blend-mode:screen;}
+
+/* Background */
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(167,139,250,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,0.03) 1px,transparent 1px);background-size:80px 80px;pointer-events:none;}
+.bg-orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;opacity:0.6;}
+.orb-1{width:600px;height:600px;background:rgba(124,58,237,0.12);top:-200px;right:-200px;}
+.orb-2{width:500px;height:500px;background:rgba(52,211,153,0.07);bottom:-100px;left:-150px;}
+.orb-3{width:300px;height:300px;background:rgba(245,158,11,0.06);top:50%;left:50%;transform:translate(-50%,-50%);}
+
+/* Noise texture */
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");opacity:0.6;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid transparent;transition:all 0.3s;}
+nav.scrolled{background:rgba(6,6,8,0.85);backdrop-filter:blur(20px);border-color:var(--border);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:3px;background:linear-gradient(135deg,var(--violet),var(--emerald));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.nav-links{display:flex;align-items:center;gap:32px;}
+.nav-links a{font-size:13px;color:var(--muted);text-decoration:none;font-weight:500;letter-spacing:0.3px;transition:color 0.2s;}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{background:linear-gradient(135deg,var(--violet2),var(--violet));color:#fff;border:none;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:600;cursor:none;font-family:'DM Sans',sans-serif;letter-spacing:0.3px;transition:all 0.2s;text-decoration:none;}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,58,237,0.4);}
+
+/* HERO */
+.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 20px 80px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:30px;padding:7px 16px;font-size:12px;color:var(--emerald);font-weight:600;letter-spacing:0.5px;margin-bottom:36px;animation:fade-up 0.6s ease both;}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--emerald);animation:pulse-dot 1.5s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(2);opacity:0.4;}}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,12vw,140px);line-height:0.9;letter-spacing:-1px;margin-bottom:28px;animation:fade-up 0.6s 0.1s ease both;}
+.hero-title .line1{display:block;color:var(--text);}
+.hero-title .line2{display:block;background:linear-gradient(135deg,var(--violet),var(--coral),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-title .line3{display:block;color:var(--text);}
+.hero-sub{font-size:18px;color:var(--muted);max-width:500px;line-height:1.6;margin-bottom:48px;font-weight:300;animation:fade-up 0.6s 0.2s ease both;}
+.hero-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;animation:fade-up 0.6s 0.3s ease both;}
+.btn-primary{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--violet2),var(--violet));color:#fff;text-decoration:none;padding:16px 32px;border-radius:14px;font-size:15px;font-weight:600;transition:all 0.25s;box-shadow:0 8px 32px rgba(124,58,237,0.35);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 48px rgba(124,58,237,0.5);}
+.btn-primary svg{transition:transform 0.2s;}
+.btn-primary:hover svg{transform:translateX(3px);}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;color:var(--muted);text-decoration:none;padding:16px 24px;border-radius:14px;font-size:15px;font-weight:500;border:1px solid var(--border2);transition:all 0.25s;}
+.btn-secondary:hover{color:var(--text);border-color:rgba(255,255,255,0.2);background:var(--surface);}
+.hero-stats{display:flex;gap:48px;margin-top:80px;padding-top:48px;border-top:1px solid var(--border);animation:fade-up 0.6s 0.4s ease both;}
+.stat{text-align:center;}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:1px;background:linear-gradient(135deg,var(--text),var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-label{font-size:12px;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-top:4px;}
+
+@keyframes fade-up{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+
+/* MARQUEE */
+.marquee-section{position:relative;z-index:1;padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;background:rgba(255,255,255,0.015);}
+.marquee-track{display:flex;gap:64px;white-space:nowrap;animation:marquee 20s linear infinite;}
+.marquee-item{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted2);font-weight:500;letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;}
+.marquee-icon{font-size:16px;}
+@keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+/* HOW IT WORKS */
+.section{position:relative;z-index:1;padding:120px 40px;}
+.section-label{font-size:11px;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,6vw,80px);letter-spacing:-0.5px;line-height:0.95;margin-bottom:20px;}
+.section-sub{font-size:16px;color:var(--muted);max-width:480px;line-height:1.6;font-weight:300;}
+
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-top:64px;}
+.step-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;overflow:hidden;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);}
+.step-card::before{content:'';position:absolute;inset:0;border-radius:24px;opacity:0;transition:opacity 0.3s;background:linear-gradient(135deg,rgba(167,139,250,0.06),transparent 60%);}
+.step-card:hover{border-color:rgba(167,139,250,0.25);transform:translateY(-4px);}
+.step-card:hover::before{opacity:1;}
+.step-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--violet);font-weight:500;letter-spacing:1px;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.step-num::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(167,139,250,0.3),transparent);}
+.step-icon{font-size:36px;margin-bottom:16px;display:block;}
+.step-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.5px;margin-bottom:10px;}
+.step-desc{font-size:14px;color:var(--muted);line-height:1.6;font-weight:300;}
+
+/* FEATURES */
+.features-section{position:relative;z-index:1;padding:0 40px 120px;}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2px;border:1px solid var(--border);border-radius:28px;overflow:hidden;margin-top:64px;}
+.feature{padding:40px;background:var(--ink2);transition:background 0.3s;}
+.feature:hover{background:rgba(167,139,250,0.04);}
+.feature-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px;border:1px solid var(--border);}
+.feature-title{font-size:17px;font-weight:600;margin-bottom:8px;letter-spacing:-0.2px;}
+.feature-desc{font-size:14px;color:var(--muted);line-height:1.6;font-weight:300;}
+
+/* PRICING */
+.pricing-section{position:relative;z-index:1;padding:0 40px 120px;text-align:center;}
+.pricing-card{max-width:440px;margin:64px auto 0;background:var(--surface);border:1px solid var(--border2);border-radius:28px;padding:48px;position:relative;overflow:hidden;}
+.pricing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--violet),transparent);}
+.pricing-badge{display:inline-block;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--violet);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px;}
+.pricing-list{list-style:none;text-align:left;margin:32px 0;display:flex;flex-direction:column;gap:14px;}
+.pricing-list li{display:flex;align-items:center;gap:12px;font-size:15px;color:var(--muted);}
+.pricing-list li::before{content:'✓';color:var(--emerald);font-weight:700;flex-shrink:0;}
+.pricing-rates{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:32px 0;}
+.rate-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center;}
+.rate-price{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--text);letter-spacing:1px;}
+.rate-label{font-size:12px;color:var(--muted2);margin-top:4px;font-weight:500;}
+
+/* TESTIMONIAL */
+.testimonial-section{position:relative;z-index:1;padding:0 40px 120px;}
+.testimonial-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:64px;}
+.testimonial{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;transition:all 0.3s;}
+.testimonial:hover{border-color:rgba(167,139,250,0.2);transform:translateY(-2px);}
+.testimonial-text{font-size:15px;line-height:1.7;color:var(--muted);font-weight:300;margin-bottom:20px;font-style:italic;}
+.testimonial-author{display:flex;align-items:center;gap:12px;}
+.author-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--violet2),var(--emerald));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;}
+.author-name{font-size:13px;font-weight:600;}
+.author-dept{font-size:12px;color:var(--muted2);}
+
+/* CTA SECTION */
+.cta-section{position:relative;z-index:1;padding:0 40px 120px;text-align:center;}
+.cta-box{background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(52,211,153,0.08));border:1px solid rgba(167,139,250,0.2);border-radius:32px;padding:80px 40px;position:relative;overflow:hidden;}
+.cta-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--violet),transparent);}
+.cta-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,7vw,88px);letter-spacing:-1px;line-height:0.95;margin-bottom:20px;}
+.cta-sub{font-size:17px;color:var(--muted);max-width:420px;margin:0 auto 40px;line-height:1.6;font-weight:300;}
+
+/* FOOTER */
+footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;background:linear-gradient(135deg,var(--violet),var(--emerald));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.footer-copy{font-size:12px;color:var(--muted2);}
+.footer-links{display:flex;gap:24px;}
+.footer-links a{font-size:12px;color:var(--muted2);text-decoration:none;transition:color 0.2s;}
+.footer-links a:hover{color:var(--text);}
+
+/* Scroll reveal */
+.reveal{opacity:0;transform:translateY(32px);transition:opacity 0.7s cubic-bezier(0.16,1,0.3,1),transform 0.7s cubic-bezier(0.16,1,0.3,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* Mobile */
+@media(max-width:768px){
+  nav{padding:16px 20px;}
+  .nav-links{display:none;}
+  .hero{padding:100px 20px 60px;}
+  .hero-stats{gap:32px;}
+  .stat-num{font-size:36px;}
+  .section,.features-section,.pricing-section,.testimonial-section,.cta-section{padding-left:20px;padding-right:20px;}
+  .cta-box{padding:48px 24px;}
+  footer{padding:32px 20px;flex-direction:column;text-align:center;}
+}
+</style>
 </head>
-<body></body>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-1"></div>
+<div class="bg-orb orb-2"></div>
+<div class="bg-orb orb-3"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="/" class="nav-logo">CampusCopy</a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <a href="/app" class="nav-cta">Start Printing →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Live at VIT Pune · Ground Floor
+  </div>
+  <h1 class="hero-title">
+    <span class="line1">PRINT</span>
+    <span class="line2">IN 60</span>
+    <span class="line3">SECONDS</span>
+  </h1>
+  <p class="hero-sub">Upload your PDF, pay instantly, collect your prints. No queue. No waiting. No stress.</p>
+  <div class="hero-actions">
+    <a href="/app" class="btn-primary">
+      Start Printing
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="#how" class="btn-secondary">
+      See how it works
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">60s</div>
+      <div class="stat-label">avg wait time</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">₹1</div>
+      <div class="stat-label">per B&W page</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">24/7</div>
+      <div class="stat-label">online ordering</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">0</div>
+      <div class="stat-label">queues</div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track" id="marqueeTrack">
+    <span class="marquee-item"><span class="marquee-icon">📄</span> PDF Upload</span>
+    <span class="marquee-item"><span class="marquee-icon">💳</span> Razorpay Payments</span>
+    <span class="marquee-item"><span class="marquee-icon">📱</span> WhatsApp Alerts</span>
+    <span class="marquee-item"><span class="marquee-icon">⚡</span> Priority Queue</span>
+    <span class="marquee-item"><span class="marquee-icon">🎟️</span> Coupon Codes</span>
+    <span class="marquee-item"><span class="marquee-icon">🏆</span> Loyalty Points</span>
+    <span class="marquee-item"><span class="marquee-icon">🖨️</span> Auto Printing</span>
+    <span class="marquee-item"><span class="marquee-icon">🔔</span> Live Tracking</span>
+    <span class="marquee-item"><span class="marquee-icon">📄</span> PDF Upload</span>
+    <span class="marquee-item"><span class="marquee-icon">💳</span> Razorpay Payments</span>
+    <span class="marquee-item"><span class="marquee-icon">📱</span> WhatsApp Alerts</span>
+    <span class="marquee-item"><span class="marquee-icon">⚡</span> Priority Queue</span>
+    <span class="marquee-item"><span class="marquee-icon">🎟️</span> Coupon Codes</span>
+    <span class="marquee-item"><span class="marquee-icon">🏆</span> Loyalty Points</span>
+    <span class="marquee-item"><span class="marquee-icon">🖨️</span> Auto Printing</span>
+    <span class="marquee-item"><span class="marquee-icon">🔔</span> Live Tracking</span>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="reveal">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">THREE STEPS.<br>ZERO HASSLE.</h2>
+    <p class="section-sub">From your phone to your hands in under a minute. No account needed.</p>
+  </div>
+  <div class="steps-grid reveal">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <span class="step-icon">📤</span>
+      <div class="step-title">Upload PDF</div>
+      <p class="step-desc">Select your file, choose pages, copies, color mode. Preview before you pay. Takes 10 seconds.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <span class="step-icon">💳</span>
+      <div class="step-title">Pay Instantly</div>
+      <p class="step-desc">UPI, cards, wallets — pay via Razorpay in one tap. Your job goes live the moment payment confirms.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <span class="step-icon">📲</span>
+      <div class="step-title">Get Notified</div>
+      <p class="step-desc">WhatsApp message when your prints are ready. Walk up, collect, done. No waiting, no checking.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="reveal">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">BUILT FOR<br>CAMPUS LIFE.</h2>
+  </div>
+  <div class="features-grid reveal">
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Priority Queue</div>
+      <p class="feature-desc">Need it now? Pay a small premium to jump ahead. Your prints skip the queue and go straight to printing.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📱</div>
+      <div class="feature-title">WhatsApp Notifications</div>
+      <p class="feature-desc">Get a WhatsApp message the moment your prints are ready. No more hovering around the counter.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">👁️</div>
+      <div class="feature-title">PDF Preview</div>
+      <p class="feature-desc">See a live preview of your document before paying. Catch wrong files before they go to print.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎟️</div>
+      <div class="feature-title">Coupon Codes</div>
+      <p class="feature-desc">Discount codes for first-time users, bulk orders, or special events. Share with your hostel group.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🏆</div>
+      <div class="feature-title">Loyalty Points</div>
+      <p class="feature-desc">Earn 1 point per rupee spent. Redeem for free prints. Regular students get rewarded automatically.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Order History</div>
+      <p class="feature-desc">Look up all your past prints by phone number. Track spending, re-order files, view job status.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section" id="pricing">
+  <div class="reveal">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">HONEST RATES.<br>NO SURPRISES.</h2>
+    <p class="section-sub" style="margin:0 auto;">Same rates as the counter. You pay for what you print, nothing else.</p>
+  </div>
+  <div class="pricing-card reveal">
+    <div class="pricing-badge">Standard Plan</div>
+    <div class="pricing-rates">
+      <div class="rate-item">
+        <div class="rate-price">₹1</div>
+        <div class="rate-label">B&W per page</div>
+      </div>
+      <div class="rate-item">
+        <div class="rate-price">₹5</div>
+        <div class="rate-label">Color per page</div>
+      </div>
+    </div>
+    <ul class="pricing-list">
+      <li>No account creation needed</li>
+      <li>Pay via UPI, card or wallet</li>
+      <li>WhatsApp notification included</li>
+      <li>Priority queue available</li>
+      <li>Loyalty points on every order</li>
+    </ul>
+    <a href="/app" class="btn-primary" style="width:100%;justify-content:center;">
+      Print Now →
+    </a>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonial-section">
+  <div class="reveal">
+    <div class="section-label">Students love it</div>
+    <h2 class="section-title">REAL WORDS.<br>REAL STUDENTS.</h2>
+  </div>
+  <div class="testimonial-grid reveal">
+    <div class="testimonial">
+      <p class="testimonial-text">"Uploaded my lab report at 8am, got the WhatsApp before I even reached the ground floor. Actual magic."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">R</div>
+        <div>
+          <div class="author-name">Ritvik M.</div>
+          <div class="author-dept">Computer Engineering, VIT Pune</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial">
+      <p class="testimonial-text">"The priority queue saved me during exam week. ₹5 extra and my notes were printed before anyone else."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">S</div>
+        <div>
+          <div class="author-name">Sneha P.</div>
+          <div class="author-dept">Electronics Engineering, VIT Pune</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial">
+      <p class="testimonial-text">"No more standing in line with 40 other people at 9am. Just pay on my phone and collect. Love this."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">A</div>
+        <div>
+          <div class="author-name">Arjun K.</div>
+          <div class="author-dept">Mechanical Engineering, VIT Pune</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-box reveal">
+    <h2 class="cta-title">STOP WAITING.<br>START PRINTING.</h2>
+    <p class="cta-sub">Join hundreds of VIT Pune students who print smarter. Takes 30 seconds to start.</p>
+    <a href="/app" class="btn-primary" style="font-size:17px;padding:18px 40px;">
+      Open CampusCopy
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">CampusCopy</div>
+  <div class="footer-copy">© 2026 CampusCopy · VIT Pune · Built by Atharva Vavhal</div>
+  <div class="footer-links">
+    <a href="/app">Print Now</a>
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+</footer>
+
+<script>
+// Custom cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',(e)=>{
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=(mx-4)+'px';
+  cursor.style.top=(my-4)+'px';
+});
+function animRing(){
+  rx+=(mx-rx)*0.12; ry+=(my-ry)*0.12;
+  ring.style.left=(rx-16)+'px';
+  ring.style.top=(ry-16)+'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.transform='scale(2)';ring.style.transform='scale(1.5)';ring.style.borderColor='rgba(167,139,250,0.7)';});
+  el.addEventListener('mouseleave',()=>{cursor.style.transform='scale(1)';ring.style.transform='scale(1)';ring.style.borderColor='rgba(167,139,250,0.4)';});
+});
+
+// Scroll nav
+const nav = document.getElementById('nav');
+window.addEventListener('scroll',()=>{
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');}});
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+</script>
+</body>
 </html>
