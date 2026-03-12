@@ -25,6 +25,23 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .orb-a{width:500px;height:500px;background:rgba(124,58,237,0.1);top:-150px;right:-150px;}
 .orb-b{width:400px;height:400px;background:rgba(52,211,153,0.06);bottom:-80px;left:-120px;}
 
+/* ── OFFLINE BANNER ── */
+#offline-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: #f59e0b;
+  color: #1a1a2e;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+#offline-banner.show { display: block; }
+body.offline-mode { padding-top: 40px; }
+
 /* ── SCREEN ── */
 .screen{display:none;position:relative;z-index:1;min-height:100vh;max-width:460px;margin:0 auto;padding-bottom:80px;opacity:0;transform:translateY(24px);transition:opacity 0.45s cubic-bezier(0.16,1,0.3,1),transform 0.45s cubic-bezier(0.16,1,0.3,1);}
 .screen.active{display:block;opacity:1;transform:translateY(0);}
@@ -246,23 +263,6 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
 .inline-btn{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:12px;padding:12px 18px;color:var(--violet);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;}
 .inline-btn:hover{background:rgba(167,139,250,0.2);border-color:rgba(167,139,250,0.4);}
 </style>
-
-  /* ── Offline banner ── */
-  #offline-banner {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 9999;
-    background: #f59e0b;
-    color: #1a1a2e;
-    text-align: center;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-  }
-  #offline-banner.show { display: block; }
-  body.offline-mode { padding-top: 40px; }
 </head>
 <body>
 
@@ -740,6 +740,8 @@ async function doUpload() {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Upload failed');
     job = d.job;
+    // FIX: keep currentJobId in sync so SW message handler can use it
+    window._currentJobId = job.id;
     document.getElementById('p-fname').textContent = job.file_name;
     document.getElementById('p-fmeta').textContent = job.pages + ' pages · ' + job.copies + ' cop' + (job.copies>1?'ies':'y');
     document.getElementById('p-pages').textContent = job.pages;
@@ -1035,7 +1037,6 @@ function updateOnlineStatus() {
   } else {
     banner.classList.remove('show');
     document.body.classList.remove('offline-mode');
-    // Tell SW to trigger background sync
     if (navigator.serviceWorker?.controller) {
       navigator.serviceWorker.controller.postMessage({ type: 'REGISTER_SYNC' });
     }
@@ -1044,17 +1045,22 @@ function updateOnlineStatus() {
 
 window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
-updateOnlineStatus(); // check on load
+updateOnlineStatus();
 
 // ─── Handle SW messages ───────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data?.type === 'SYNC_ONLINE') {
-      // Connection restored — refresh job status if on status screen
       const statusScreen = document.getElementById('screen-status');
-      if (statusScreen && statusScreen.style.display !== 'none') {
+      if (statusScreen && statusScreen.classList.contains('active')) {
+        // FIX: use window._currentJobId which is now set in doUpload()
         const jobId = window._currentJobId;
-        if (jobId) pollStatus(jobId);
+        if (jobId) {
+          fetch(API + '/api/jobs/' + jobId)
+            .then(r => r.json())
+            .then(d => { if (d.job) setStatus(d.job.status); })
+            .catch(() => {});
+        }
       }
     }
     if (e.data?.type === 'NAVIGATE') {
