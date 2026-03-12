@@ -5,6 +5,7 @@ const NAV = [
   { path: '/analytics', icon: '📊', label: 'Analytics'    },
   { path: '/printers',  icon: '⚙️', label: 'Printers'     },
   { path: '/coupons',   icon: '🎟️', label: 'Coupons'      },
+  { path: '/loyalty',   icon: '⭐', label: 'Loyalty'      },
 ];
 
 export default function Layout() {

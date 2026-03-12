@@ -131,9 +131,11 @@ async function webhook(req, res) {
       // Loyalty: deduct redeemed points
       if (job.loyalty_points_used > 0 && job.phone_number) {
         await db.query(
-          `INSERT INTO loyalty_points (phone, delta, reason, job_id, created_at)
-           VALUES ($1, $2, 'redeemed', $3, NOW())`,
-          [job.phone_number, -job.loyalty_points_used, job.id]
+          `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
+           VALUES ($1, $2, $3, 'redeem', $4, $5)`,
+          [job.phone_number, job.college_id || 'college1', job.id,
+           job.loyalty_points_used,
+           `Redeemed ${job.loyalty_points_used} pts for ₹${(job.loyalty_points_used * 0.10).toFixed(0)} off`]
         );
       }
 
@@ -141,9 +143,11 @@ async function webhook(req, res) {
       if (job.phone_number) {
         const ptsEarned = Math.floor(parseFloat(job.cost));
         await db.query(
-          `INSERT INTO loyalty_points (phone, delta, reason, job_id, created_at)
-           VALUES ($1, $2, 'earned', $3, NOW())`,
-          [job.phone_number, ptsEarned, job.id]
+          `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
+           VALUES ($1, $2, $3, 'earn', $4, $5)`,
+          [job.phone_number, job.college_id || 'college1', job.id,
+           ptsEarned,
+           `Earned ${ptsEarned} pts for printing ${job.file_name}`]
         );
       }
 
