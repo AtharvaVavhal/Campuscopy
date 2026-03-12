@@ -54,14 +54,15 @@ router.post('/register', async (req, res) => {
     // New printer — generate api_key and insert
     const api_key = crypto.randomBytes(32).toString('hex');
 
-    // Use VIT college_id as default (from schema seed)
-    const DEFAULT_COLLEGE_ID = '00000000-0000-0000-0000-000000000001';
+    // Use the first college in the DB (avoids hardcoded UUID that may not exist)
+    const college = await pool.query('SELECT id FROM colleges ORDER BY created_at LIMIT 1');
+    const college_id = college.rows[0]?.id || null;
 
     const { rows } = await pool.query(
       `INSERT INTO printers (college_id, name, location, mac_address, api_key)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, api_key, name`,
-      [DEFAULT_COLLEGE_ID, name || 'New Printer', location || 'Unknown', mac_address, api_key]
+      [college_id, name || 'New Printer', location || 'Unknown', mac_address, api_key]
     );
 
     return res.status(201).json({

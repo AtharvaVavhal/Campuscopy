@@ -12,6 +12,28 @@ const authMiddleware  = require("../middleware/auth");
 const { notifyJobStatus } = require("../utils/whatsapp");
 const { sendPush, buildPayload } = require("../utils/push");
 
+// ─── Bridge auth: validates x-api-key against DB ─────────────
+async function bridgeAuth(req, res, next) {
+  const key = req.headers["x-api-key"];
+  if (!key) return res.status(401).json({ error: "Missing API key" });
+  try {
+    const { rows } = await db.query(
+      "SELECT id FROM printers WHERE api_key = $1 LIMIT 1", [key]
+    );
+    if (!rows[0]) return res.status(401).json({ error: "Invalid API key" });
+    req._printerId = rows[0].id;
+    next();
+  } catch {
+    return res.status(500).json({ error: "Auth error" });
+  }
+}
+
+// ─── Combined: JWT admin OR valid bridge API key ──────────────
+function adminOrBridgeAuth(req, res, next) {
+  if (req.headers["x-api-key"]) return bridgeAuth(req, res, next);
+  return authMiddleware(req, res, next);
+}
+
 // ─── Multer ───────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -49,6 +71,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!req.file)   return res.status(400).json({ error: "No file uploaded" });
     if (!printer_id) return res.status(400).json({ error: "No printer selected" });
 
+    const parsedPages  = parseInt(pages);
+    const parsedCopies = parseInt(copies);
+    if (!parsedPages  || parsedPages  < 1) return res.status(400).json({ error: "Invalid page count" });
+    if (!parsedCopies || parsedCopies < 1) return res.status(400).json({ error: "Invalid copies count" });
+
     const isColor       = color        === "true" || color        === true;
     const isDoubleSided = double_sided === "true" || double_sided === true;
     const isPriority    = priority     === "true" || priority     === true;
@@ -59,7 +86,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const pricePerPage = isColor ? 5 : 1;
     const multiplier   = isDoubleSided ? 0.8 : 1;
     const priorityFee  = isPriority ? 5 : 0;
-    const cost = (parseInt(pages) * parseInt(copies) * pricePerPage * multiplier + priorityFee).toFixed(2);
+    const cost = (parsedPages * parsedCopies * pricePerPage * multiplier + priorityFee).toFixed(2);
 
     const printerRow = await db.query(
       "SELECT college_id FROM printers WHERE id = $1",
@@ -81,7 +108,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       [
         jobId, college_id, printer_id,
         req.file.originalname, req.file.path,
-        parseInt(pages), parseInt(copies),
+        parsedPages, parsedCopies,
         isColor, isDoubleSided, cost, isPriority,
         pageFrom, pageTo,
         phone.trim() || null, qr_token, qr_code,
@@ -140,7 +167,7 @@ router.get("/by-phone/:phone", async (req, res) => {
 });
 
 // ─── GET /api/jobs/printer/:printer_id (print bridge) ────────
-router.get("/printer/:printer_id", async (req, res) => {
+router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT * FROM jobs
@@ -189,7 +216,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // ─── GET /api/jobs/:id/file (print bridge downloads PDF) ─────
-router.get("/:id/file", async (req, res) => {
+router.get("/:id/file", bridgeAuth, async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM jobs WHERE id = $1", [req.params.id]);
     const job = result.rows[0];
@@ -202,7 +229,7 @@ router.get("/:id/file", async (req, res) => {
 });
 
 // ─── PATCH /api/jobs/:id/status (admin / print bridge) ───────
-router.patch("/:id/status", async (req, res) => {
+router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
   try {
     const { status } = req.body;
     const valid = ["pending", "paid", "queued", "printing", "done", "failed", "cancelled"];
