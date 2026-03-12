@@ -95,7 +95,7 @@ async function webhook(req, res) {
     return res.status(400).json({ error: "Invalid JSON" });
   }
 
-  if (event.event === "payment.captured") {
+  if (event.event === "payment.authorized") {
     const payment = event.payload.payment.entity;
     const orderId = payment.order_id;
 
