@@ -37,6 +37,7 @@ async function runMigrations() {
       UNIQUE (job_id, endpoint)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_push_job_id ON push_subscriptions(job_id)`,
+    `ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS phone TEXT`,
 
     // ── Coupons ─────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS coupons (
@@ -106,6 +107,7 @@ async function runMigrations() {
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS coupon_id           UUID`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS discount_amount     NUMERIC(8,2) DEFAULT 0`,
     `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS loyalty_points_used INTEGER DEFAULT 0`,
+
     // ── Printer auth columns (for print bridge) ────────────
     `ALTER TABLE printers ADD COLUMN IF NOT EXISTS mac_address TEXT`,
     `ALTER TABLE printers ADD COLUMN IF NOT EXISTS api_key     TEXT`,
@@ -117,6 +119,7 @@ async function runMigrations() {
     `ALTER TABLE colleges ADD COLUMN IF NOT EXISTS platform_fee_pct    NUMERIC(5,2) DEFAULT 3.0`,
     `ALTER TABLE colleges ADD COLUMN IF NOT EXISTS status              TEXT DEFAULT 'active'`,
     `ALTER TABLE colleges ADD COLUMN IF NOT EXISTS email               TEXT`,
+
   ];
 
   for (const sql of migrations) {
