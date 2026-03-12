@@ -12,7 +12,7 @@ async function createPaymentOrder(req, res) {
   try {
     const { rows } = await db.query("SELECT * FROM jobs WHERE id = $1", [job_id]);
     const job = rows[0];
-    if (!job)                    return res.status(404).json({ error: "Job not found" });
+    if (!job)                     return res.status(404).json({ error: "Job not found" });
     if (job.status !== "pending") return res.status(400).json({ error: "Job is not pending" });
 
     let finalAmount = parseFloat(job.cost);
@@ -20,9 +20,15 @@ async function createPaymentOrder(req, res) {
     // Apply coupon
     if (coupon_code) {
       const coupon = await Coupon.findByCode(coupon_code);
-      if (coupon && coupon.uses_left > 0) {
-        const { discount_amount, final_amount } = Coupon.calcDiscount(coupon, finalAmount);
-        finalAmount = final_amount;
+      if (coupon && (coupon.uses_left === null || coupon.uses_left > 0)) {
+        let discount_amount = 0;
+        if (coupon.discount_type === "percent") {
+          discount_amount = parseFloat(((coupon.discount_value / 100) * finalAmount).toFixed(2));
+        } else {
+          discount_amount = parseFloat(coupon.discount_value);
+        }
+        discount_amount = Math.min(discount_amount, finalAmount);
+        finalAmount = parseFloat((finalAmount - discount_amount).toFixed(2));
         await db.query(
           `UPDATE jobs SET coupon_id = $1, discount_amount = $2 WHERE id = $3`,
           [coupon.id, discount_amount, job_id]
@@ -52,7 +58,7 @@ async function createPaymentOrder(req, res) {
       );
     }
 
-const order = await createOrder({ amount: finalAmount, receipt: job_id });
+    const order = await createOrder({ amount: finalAmount, receipt: job_id });
 
     await db.query(
       `UPDATE jobs SET razorpay_order_id = $1 WHERE id = $2`,
