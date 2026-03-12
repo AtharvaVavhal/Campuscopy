@@ -56,7 +56,7 @@ const Coupon = {
     const { rows } = await pool.query(
       `INSERT INTO coupons (college_id, code, discount_type, discount_value, min_order, uses_left, expires_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [college_id || 'college1', code.toUpperCase().trim(), discount_type, discount_value,
+      [college_id || '00000000-0000-0000-0000-000000000001', code.toUpperCase().trim(), discount_type, discount_value,
        min_order || 0, uses_left || null, expires_at || null]
     );
     return rows[0];

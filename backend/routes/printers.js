@@ -102,17 +102,3 @@ router.post('/:id/heartbeat', bridgeAuth, async (req, res) => {
 });
 
 // ── Public — get job by QR token ─────────────────────────────
-router.get('/qr/:token', async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      'SELECT * FROM jobs WHERE qr_token = $1 LIMIT 1',
-      [req.params.token]
-    );
-    if (!rows[0]) return res.status(404).json({ error: 'Not found' });
-    return res.json({ job: rows[0] });
-  } catch (err) {
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-module.exports = router;
