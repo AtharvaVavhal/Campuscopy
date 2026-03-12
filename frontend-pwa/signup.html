@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampusCopy — Register Your College</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d12;
+      --bg2:     #16161f;
+      --border:  rgba(255,255,255,0.08);
+      --purple:  #a78bfa;
+      --green:   #34d399;
+      --red:     #f87171;
+      --gold:    #fbbf24;
+      --text:    #eeeef5;
+      --muted:   rgba(238,238,245,0.4);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--purple), #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .tagline {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Steps ── */
+    .steps {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+      align-items: center;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+    }
+    .step.active .step-num { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .step.active { color: var(--purple); }
+    .step.done .step-num { background: var(--green); border-color: var(--green); color: #fff; }
+    .step.done { color: var(--green); }
+    .step-line { flex: 1; height: 1px; background: var(--border); max-width: 40px; }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--purple);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .required { color: var(--red); margin-left: 2px; }
+
+    input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--purple); }
+    input::placeholder { color: var(--muted); }
+    input.optional { opacity: 0.7; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+    /* ── Fee badge ── */
+    .fee-box {
+      background: rgba(167,139,250,0.07);
+      border: 1px solid rgba(167,139,250,0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .fee-icon { font-size: 24px; }
+    .fee-text { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .fee-text strong { color: var(--purple); }
+
+    /* ── Button ── */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), #7c3aed);
+      color: #fff;
+    }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Alert ── */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .alert-error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: var(--red); }
+    .alert-success { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.3);  color: var(--green); }
+
+    /* ── Success screen ── */
+    #success-screen { display: none; text-align: center; }
+    .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .success-title { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--green); margin-bottom: 8px; }
+    .success-sub { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+    .cred-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    .cred-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+    .cred-label { color: var(--muted); }
+    .cred-val { font-weight: 600; font-family: monospace; font-size: 12px; background: rgba(255,255,255,0.06); padding: 3px 8px; border-radius: 6px; }
+    .cred-val.purple { color: var(--purple); }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">CampusCopy</div>
+    <div class="tagline">Set up automated printing for your college in 2 minutes</div>
+  </div>
+
+  <!-- Steps indicator -->
+  <div class="steps">
+    <div class="step active" id="step-1"><div class="step-num">1</div> College</div>
+    <div class="step-line"></div>
+    <div class="step" id="step-2"><div class="step-num">2</div> Admin</div>
+    <div class="step-line"></div>
+    <div class="step" id="step-3"><div class="step-num">3</div> Payments</div>
+  </div>
+
+  <!-- Form card -->
+  <div class="card" id="form-card">
+    <div id="alert" class="alert"></div>
+
+    <!-- Section 1: College -->
+    <div id="section-college">
+      <div class="section-title">🏫 College Details</div>
+      <div class="field">
+        <label>College Name <span class="required">*</span></label>
+        <input id="college_name" type="text" placeholder="Vishwakarma Institute of Technology" />
+      </div>
+      <div class="field">
+        <label>College Email</label>
+        <input id="college_email" type="email" placeholder="info@vit.edu (optional)" class="optional" />
+      </div>
+      <div class="field">
+        <label>Printer Name</label>
+        <input id="printer_name" type="text" placeholder="Main Printer" class="optional" />
+      </div>
+      <div class="field">
+        <label>Printer Location</label>
+        <input id="printer_location" type="text" placeholder="Ground Floor, Block A" class="optional" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Section 2: Admin -->
+    <div id="section-admin">
+      <div class="section-title">👤 Admin Account</div>
+      <div class="field">
+        <label>Your Name <span class="required">*</span></label>
+        <input id="admin_name" type="text" placeholder="Atharva Vavhal" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Email <span class="required">*</span></label>
+          <input id="admin_email" type="email" placeholder="you@college.edu" />
+        </div>
+        <div class="field">
+          <label>Password <span class="required">*</span></label>
+          <input id="admin_password" type="password" placeholder="min 8 chars" />
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Section 3: Razorpay -->
+    <div id="section-razorpay">
+      <div class="section-title">💳 Razorpay (Optional — add later in Settings)</div>
+      <div class="field">
+        <label>Key ID</label>
+        <input id="rzp_key_id" type="text" placeholder="rzp_live_..." class="optional" />
+      </div>
+      <div class="field">
+        <label>Key Secret</label>
+        <input id="rzp_key_secret" type="password" placeholder="••••••••••••••••" class="optional" />
+        <div class="hint">Your Razorpay keys are stored encrypted and never shared.</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Platform fee notice -->
+    <div class="fee-box">
+      <div class="fee-icon">💜</div>
+      <div class="fee-text">
+        CampusCopy charges a <strong>3% platform fee</strong> per successful transaction.
+        Everything else — WhatsApp alerts, push notifications, loyalty points, coupon system — is included free.
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="submit-btn" onclick="handleSignup()">
+      🚀 Create My Print Shop
+    </button>
+  </div>
+
+  <!-- Success screen -->
+  <div class="card" id="success-screen">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">You're Live!</div>
+    <div class="success-sub">
+      Your college print shop is ready.<br />
+      Log in to the admin dashboard to manage jobs, coupons, and settings.
+    </div>
+    <div class="cred-box">
+      <div class="cred-row">
+        <span class="cred-label">Login Email</span>
+        <span class="cred-val purple" id="cred-email">—</span>
+      </div>
+      <div class="cred-row">
+        <span class="cred-label">Printer ID</span>
+        <span class="cred-val" id="cred-printer">—</span>
+      </div>
+      <div class="cred-row" style="margin-bottom:0">
+        <span class="cred-label">College ID</span>
+        <span class="cred-val" id="cred-college">—</span>
+      </div>
+    </div>
+    <a href="https://campuscopy.vercel.app" style="text-decoration:none">
+      <button class="btn btn-primary">→ Go to Admin Dashboard</button>
+    </a>
+  </div>
+
+  <script>
+    const API = 'https://campuscopy-api.onrender.com';
+
+    function showAlert(msg, type = 'error') {
+      const el = document.getElementById('alert');
+      el.textContent = msg;
+      el.className = `alert alert-${type}`;
+      el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideAlert() {
+      document.getElementById('alert').style.display = 'none';
+    }
+
+    function val(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    async function handleSignup() {
+      hideAlert();
+
+      const college_name    = val('college_name');
+      const admin_name      = val('admin_name');
+      const admin_email     = val('admin_email');
+      const admin_password  = val('admin_password');
+
+      if (!college_name) return showAlert('College name is required.');
+      if (!admin_name)   return showAlert('Your name is required.');
+      if (!admin_email)  return showAlert('Admin email is required.');
+      if (!admin_password || admin_password.length < 8)
+        return showAlert('Password must be at least 8 characters.');
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Setting up your shop…';
+
+      try {
+        const res = await fetch(`${API}/api/colleges/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            college_name,
+            college_email:      val('college_email') || undefined,
+            admin_name,
+            admin_email,
+            admin_password,
+            razorpay_key_id:    val('rzp_key_id')     || undefined,
+            razorpay_key_secret: val('rzp_key_secret') || undefined,
+            printer_name:       val('printer_name')   || undefined,
+            printer_location:   val('printer_location') || undefined,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showAlert(data.error || 'Something went wrong. Please try again.');
+          btn.disabled = false;
+          btn.textContent = '🚀 Create My Print Shop';
+          return;
+        }
+
+        // Show success screen
+        document.getElementById('cred-email').textContent   = data.login_email;
+        document.getElementById('cred-printer').textContent = data.printer_id;
+        document.getElementById('cred-college').textContent = data.college_id;
+        document.getElementById('form-card').style.display  = 'none';
+        document.getElementById('success-screen').style.display = 'block';
+        document.querySelector('.steps').style.display = 'none';
+
+      } catch (err) {
+        showAlert('Network error. Please check your connection and try again.');
+        btn.disabled = false;
+        btn.textContent = '🚀 Create My Print Shop';
+      }
+    }
+  </script>
+</body>
+</html>

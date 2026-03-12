@@ -64,6 +64,7 @@ app.use("/api/printers", require("./routes/printers"));
 app.use("/api/coupons",  require("./routes/coupons"));
 app.use("/api/loyalty",  require("./routes/loyalty"));
 app.use("/api/push",     require("./routes/push"));
+app.use("/api/colleges", require("./routes/colleges"));
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));

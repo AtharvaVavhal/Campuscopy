@@ -6,6 +6,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import PrintersPage from './pages/PrintersPage';
 import CouponsPage from './pages/CouponsPage';
 import LoyaltyPage from './pages/LoyaltyPage';
+import SettingsPage from './pages/SettingsPage';
 import Layout from './components/Layout';
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="printers" element={<PrintersPage />} />
             <Route path="coupons" element={<CouponsPage />} />
             <Route path="loyalty" element={<LoyaltyPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
