@@ -1,10 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import api from '../api/client';
 
 const SOCKET_URL = 'https://campuscopy-api.onrender.com';
-const PRINTER_ID = '21f13e16-09de-4f77-a417-9efe3f12521f';
 
 const STATUS_COLORS = {
   pending:  { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.2)'  },
@@ -13,6 +12,7 @@ const STATUS_COLORS = {
   printing: { bg: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: 'rgba(167,139,250,0.2)' },
   done:     { bg: 'rgba(52,211,153,0.1)',  color: '#34d399', border: 'rgba(52,211,153,0.2)'  },
   failed:   { bg: 'rgba(248,113,113,0.1)', color: '#f87171', border: 'rgba(248,113,113,0.2)' },
+  cancelled:{ bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', border: 'rgba(148,163,184,0.25)' },
 };
 
 const NEXT = { pending: 'queued', paid: 'queued', queued: 'printing', printing: 'done' };
@@ -112,6 +112,8 @@ export default function JobQueuePage() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState('active');
   const [updates, setUpdates] = useState(0);
+  const socketRef = useRef(null);
+  const joinedPrinterIdsRef = useRef(new Set());
 
   const { data, isLoading } = useQuery({
     queryKey: ['jobs'],
@@ -134,29 +136,56 @@ export default function JobQueuePage() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
   });
 
+  const rawJobs = data?.jobs || [];
+  const printerIds = useMemo(
+    () => [...new Set(rawJobs.map(j => j.printer_id).filter(Boolean))],
+    [rawJobs]
+  );
+
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+    socketRef.current = s;
 
-    const joinRoom = () => s.emit('join_printer', PRINTER_ID);
-    s.on('connect', joinRoom);
-    s.on('reconnect', joinRoom);
+    const joinKnownPrinters = () => {
+      joinedPrinterIdsRef.current.forEach(printerId => s.emit('join_printer', printerId));
+    };
+
+    s.on('connect', joinKnownPrinters);
+    s.on('reconnect', joinKnownPrinters);
 
     s.on('queue_update', () => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
       setUpdates(u => u + 1);
     });
-    return () => s.disconnect();
-  }, []);
+
+    return () => {
+      s.off('connect', joinKnownPrinters);
+      s.off('reconnect', joinKnownPrinters);
+      s.disconnect();
+      socketRef.current = null;
+      joinedPrinterIdsRef.current.clear();
+    };
+  }, [qc]);
+
+  useEffect(() => {
+    const s = socketRef.current;
+    printerIds.forEach((printerId) => {
+      if (!joinedPrinterIdsRef.current.has(printerId)) {
+        joinedPrinterIdsRef.current.add(printerId);
+        if (s?.connected) s.emit('join_printer', printerId);
+      }
+    });
+  }, [printerIds]);
 
   // Sort: priority jobs first, then by created_at
-  const jobs = (data?.jobs || []).sort((a, b) => {
+  const jobs = [...rawJobs].sort((a, b) => {
     if (a.priority && !b.priority) return -1;
     if (!a.priority && b.priority) return 1;
     return new Date(a.created_at) - new Date(b.created_at);
   });
 
   const filtered = filter === 'active'
-    ? jobs.filter(j => !['done', 'failed'].includes(j.status))
+    ? jobs.filter(j => !['done', 'failed', 'cancelled'].includes(j.status))
     : filter === 'done'
     ? jobs.filter(j => j.status === 'done')
     : jobs;
@@ -169,7 +198,7 @@ export default function JobQueuePage() {
     done:     jobs.filter(j => j.status === 'done').length,
   };
 
-  const priorityCount = jobs.filter(j => j.priority && !['done','failed'].includes(j.status)).length;
+  const priorityCount = jobs.filter(j => j.priority && !['done','failed','cancelled'].includes(j.status)).length;
 
   return (
     <div style={{ padding: '36px 40px', maxWidth: 860 }}>

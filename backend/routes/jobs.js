@@ -171,7 +171,7 @@ router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT * FROM jobs
-       WHERE printer_id = $1 AND status IN ('paid','queued','printing')
+       WHERE printer_id = $1 AND status IN ('pending','paid','queued','printing')
        ORDER BY priority DESC, created_at ASC`,
       [req.params.printer_id]
     );
