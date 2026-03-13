@@ -45,16 +45,18 @@ app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api/", rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests, please try again later." },
-}));
-
+// ✅ FIX BUG05: Login limiter MUST be registered before the general limiter.
+// Express matches routes in order, so the stricter rule wins for /api/auth/login.
 app.use("/api/auth/login", rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: "Too many login attempts, please try again later." },
+}));
+
+app.use("/api/", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: "Too many requests, please try again later." },
 }));
 
 app.use("/api/auth",     require("./routes/auth"));
@@ -65,6 +67,7 @@ app.use("/api/coupons",  require("./routes/coupons"));
 app.use("/api/loyalty",  require("./routes/loyalty"));
 app.use("/api/push",     require("./routes/push"));
 app.use("/api/colleges", require("./routes/colleges"));
+app.use("/api/admin",    require("./routes/admin"));
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));

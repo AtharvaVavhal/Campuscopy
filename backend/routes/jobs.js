@@ -2,13 +2,13 @@
 
 const express = require("express");
 const router  = express.Router();
-const multer  = require("multer");
 const path    = require("path");
 const fs      = require("fs");
 const QRCode  = require("qrcode");
 const { v4: uuidv4 } = require("uuid");
 const db      = require("../config/db");
 const authMiddleware  = require("../middleware/auth");
+const upload  = require("../middleware/upload");   // BUG09: use shared multer config
 const { notifyJobStatus } = require("../utils/whatsapp");
 const { sendPush, buildPayload } = require("../utils/push");
 
@@ -33,25 +33,6 @@ function adminOrBridgeAuth(req, res, next) {
   if (req.headers["x-api-key"]) return bridgeAuth(req, res, next);
   return authMiddleware(req, res, next);
 }
-
-// ─── Multer ───────────────────────────────────────────────────
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dest = process.env.MULTER_DEST || "./uploads";
-    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-    cb(null, dest);
-  },
-  filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname)),
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE_MB) || 20) * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") return cb(null, true);
-    cb(new Error("Only PDF files are allowed"));
-  },
-});
 
 // ─── POST /api/jobs/upload ────────────────────────────────────
 router.post("/upload", upload.single("file"), async (req, res) => {
@@ -135,12 +116,16 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 router.get("/", authMiddleware, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
+    // ✅ FIX BUG11: Filter jobs by the authenticated admin's college_id
+    const college_id = req.user?.college_id;
     const result = await db.query(
       `SELECT j.*, p.name AS printer_name
        FROM jobs j
        LEFT JOIN printers p ON p.id = j.printer_id
+       WHERE j.college_id = $1
        ORDER BY j.priority DESC, j.created_at ASC
-       LIMIT 100`
+       LIMIT 100`,
+      [college_id]
     );
     res.json({ jobs: result.rows });
   } catch (err) {
@@ -149,7 +134,8 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // ─── GET /api/jobs/by-phone/:phone ───────────────────────────
-router.get("/by-phone/:phone", async (req, res) => {
+// ✅ FIX BUG03: Requires JWT — student must be authenticated to see their own jobs
+router.get("/by-phone/:phone", authMiddleware, async (req, res) => {
   try {
     const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
     const result = await db.query(
@@ -168,6 +154,10 @@ router.get("/by-phone/:phone", async (req, res) => {
 
 // ─── GET /api/jobs/printer/:printer_id (print bridge) ────────
 router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
+  // ✅ FIX BUG17: Ensure the authenticated printer can only fetch its own queue
+  if (req._printerId !== req.params.printer_id) {
+    return res.status(403).json({ error: "Printer ID mismatch" });
+  }
   try {
     const result = await db.query(
       `SELECT * FROM jobs
@@ -182,7 +172,8 @@ router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
 });
 
 // ─── GET /api/jobs/qr/:token (counter verification) ──────────
-router.get("/qr/:token", async (req, res) => {
+// ✅ FIX BUG03: Requires JWT — counter staff must be authenticated
+router.get("/qr/:token", authMiddleware, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT j.*, p.name AS printer_name

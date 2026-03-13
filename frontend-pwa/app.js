@@ -23,10 +23,13 @@ function updateCost() {
   const copies = parseInt(document.getElementById('copies').value) || 1;
   const color = document.getElementById('color').checked;
   const doubleSided = document.getElementById('double-sided').checked;
+  const priority = document.getElementById('priority') && document.getElementById('priority').checked;
   const pricePerPage = color ? 5 : 1;
   const multiplier = doubleSided ? 0.8 : 1;
-  const cost = (pages * copies * pricePerPage * multiplier).toFixed(2);
-  document.getElementById('cost-display').textContent = '₹' + cost;
+  const baseCost = pages * copies * pricePerPage * multiplier;
+  const priorityFee = priority ? 5 : 0;
+  const cost = (baseCost + priorityFee).toFixed(2);
+  document.getElementById('cost-display').textContent = '₹' + cost + (priorityFee ? ' (incl. ₹5 priority fee)' : '');
   const hasFile = document.getElementById('file-input').files.length > 0;
   const hasPrinter = document.getElementById('printer-select').value !== '';
   document.getElementById('upload-btn').disabled = !(hasFile && hasPrinter && pages > 0);
@@ -82,7 +85,7 @@ async function loadPrinters() {
     });
     sel.onchange = updateCost;
   } catch {
-    document.getElementById('printer-select').innerHTML = '<option value="e6ed4e43-678e-4bb4-b749-161df4250d94">Main Printer — Ground Floor</option>';
+    document.getElementById('printer-select').innerHTML = '<option value="">Could not load printers — please refresh</option>';
     updateCost();
   }
 }

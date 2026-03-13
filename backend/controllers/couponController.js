@@ -37,8 +37,9 @@ const createCoupon = async (req, res) => {
     if (!code || !discount_type || !discount_value)
       return res.status(400).json({ error: 'code, discount_type, discount_value are required' });
 
+    // ✅ FIX BUG13: auth middleware sets req.user, not req.admin
     const coupon = await Coupon.create({
-      college_id: req.admin?.college_id || 'college1',
+      college_id: req.user?.college_id || 'college1',
       code, discount_type, discount_value, min_order, uses_left, expires_at,
     });
     return res.status(201).json({ coupon });

@@ -37,7 +37,7 @@ async function runMigrations() {
       UNIQUE (job_id, endpoint)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_push_job_id ON push_subscriptions(job_id)`,
-    `ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS phone TEXT`,
+    // phone column is already defined in the CREATE TABLE above — no ALTER needed
 
     // ── Coupons ─────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS coupons (

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import api from '../api/client';
 
@@ -12,10 +12,9 @@ const STATUS_COLORS = {
   printing: { bg: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: 'rgba(167,139,250,0.2)' },
   done:     { bg: 'rgba(52,211,153,0.1)',  color: '#34d399', border: 'rgba(52,211,153,0.2)'  },
   failed:   { bg: 'rgba(248,113,113,0.1)', color: '#f87171', border: 'rgba(248,113,113,0.2)' },
-  cancelled:{ bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', border: 'rgba(148,163,184,0.25)' },
 };
 
-const NEXT = { pending: 'queued', paid: 'queued', queued: 'printing', printing: 'done' };
+const NEXT       = { pending: 'queued', paid: 'queued', queued: 'printing', printing: 'done' };
 const NEXT_LABEL = { pending: '→ Queue', paid: '→ Queue', queued: '→ Print', printing: '✓ Done' };
 
 function Badge({ status }) {
@@ -24,27 +23,14 @@ function Badge({ status }) {
     <span style={{
       padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
       textTransform: 'uppercase', letterSpacing: 1,
-      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
-      flexShrink: 0,
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`, flexShrink: 0,
     }}>{status}</span>
-  );
-}
-
-function PriorityBadge() {
-  return (
-    <span style={{
-      padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: 1,
-      background: 'rgba(245,158,11,0.12)', color: '#f59e0b',
-      border: '1px solid rgba(245,158,11,0.3)',
-      flexShrink: 0,
-    }}>⚡ Priority</span>
   );
 }
 
 function JobCard({ job, onUpdate, loading }) {
   const [hovered, setHovered] = useState(false);
-  const next = NEXT[job.status];
+  const next       = NEXT[job.status];
   const isPriority = job.priority;
 
   return (
@@ -65,15 +51,20 @@ function JobCard({ job, onUpdate, loading }) {
             📄 {job.file_name}
           </span>
           <Badge status={job.status} />
-          {isPriority && <PriorityBadge />}
+          {isPriority && (
+            <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', flexShrink: 0 }}>
+              ⚡ Priority
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {[
             job.page_from && job.page_to ? `📑 pp. ${job.page_from}–${job.page_to}` : `📋 ${job.pages} pages`,
             `📦 ${job.copies} cop${job.copies > 1 ? 'ies' : 'y'}`,
             `🎨 ${job.color ? 'Color' : 'B&W'}`,
-            `${job.double_sided ? '↔️ 2-sided' : ''}`,
+            job.double_sided ? '↔️ 2-sided' : '',
             `💰 ₹${job.cost}`,
+            job.printer_name ? `🖨️ ${job.printer_name}` : '',
           ].filter(Boolean).map(v => (
             <span key={v} style={{ fontSize: 12, color: 'rgba(238,238,245,0.45)' }}>{v}</span>
           ))}
@@ -97,8 +88,7 @@ function JobCard({ job, onUpdate, loading }) {
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             whiteSpace: 'nowrap', opacity: loading ? 0.6 : 1,
             boxShadow: isPriority ? '0 4px 16px rgba(245,158,11,0.3)' : '0 4px 16px rgba(167,139,250,0.25)',
-            transition: 'all 0.2s',
-            flexShrink: 0,
+            transition: 'all 0.2s', flexShrink: 0,
           }}
         >
           {NEXT_LABEL[job.status]}
@@ -113,81 +103,64 @@ export default function JobQueuePage() {
   const [filter, setFilter] = useState('active');
   const [updates, setUpdates] = useState(0);
   const socketRef = useRef(null);
-  const joinedPrinterIdsRef = useRef(new Set());
 
+  // ── Fetch from /api/admin/jobs (auth'd, college-scoped) ──────
   const { data, isLoading } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => api.get(`/api/jobs`).then(r => r.data),
+    queryKey: ['admin-jobs', filter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filter === 'done') params.set('status', 'done');
+      return api.get(`/api/admin/jobs?${params}`).then(r => r.data);
+    },
     refetchInterval: 10000,
   });
 
+  // ── Status update hits /api/admin/jobs/:id/status ────────────
   const { mutate: updateStatus, isPending } = useMutation({
-    mutationFn: ({ id, status }) => api.patch(`/api/jobs/${id}/status`, { status }),
+    mutationFn: ({ id, status }) =>
+      api.patch(`/api/admin/jobs/${id}/status`, { status }),
     onMutate: async ({ id, status }) => {
-      await qc.cancelQueries({ queryKey: ['jobs'] });
-      const prev = qc.getQueryData(['jobs']);
-      qc.setQueryData(['jobs'], old => ({
+      await qc.cancelQueries({ queryKey: ['admin-jobs'] });
+      const prev = qc.getQueryData(['admin-jobs', filter]);
+      qc.setQueryData(['admin-jobs', filter], old => ({
         ...old,
         jobs: (old?.jobs || []).map(j => j.id === id ? { ...j, status } : j),
       }));
       return { prev };
     },
-    onError: (_err, _vars, ctx) => qc.setQueryData(['jobs'], ctx.prev),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
+    onError: (_err, _vars, ctx) => qc.setQueryData(['admin-jobs', filter], ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['admin-jobs'] }),
   });
 
-  const rawJobs = data?.jobs || [];
-  const printerIds = useMemo(
-    () => [...new Set(rawJobs.map(j => j.printer_id).filter(Boolean))],
-    [rawJobs]
-  );
-
+  // ── Socket for real-time queue updates ───────────────────────
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
     socketRef.current = s;
 
-    const joinKnownPrinters = () => {
-      joinedPrinterIdsRef.current.forEach(printerId => s.emit('join_printer', printerId));
-    };
-
-    s.on('connect', joinKnownPrinters);
-    s.on('reconnect', joinKnownPrinters);
-
+    s.on('job_update', () => {
+      qc.invalidateQueries({ queryKey: ['admin-jobs'] });
+      setUpdates(u => u + 1);
+    });
     s.on('queue_update', () => {
-      qc.invalidateQueries({ queryKey: ['jobs'] });
+      qc.invalidateQueries({ queryKey: ['admin-jobs'] });
       setUpdates(u => u + 1);
     });
 
-    return () => {
-      s.off('connect', joinKnownPrinters);
-      s.off('reconnect', joinKnownPrinters);
-      s.disconnect();
-      socketRef.current = null;
-      joinedPrinterIdsRef.current.clear();
-    };
+    return () => { s.disconnect(); socketRef.current = null; };
   }, [qc]);
 
-  useEffect(() => {
-    const s = socketRef.current;
-    printerIds.forEach((printerId) => {
-      if (!joinedPrinterIdsRef.current.has(printerId)) {
-        joinedPrinterIdsRef.current.add(printerId);
-        if (s?.connected) s.emit('join_printer', printerId);
-      }
-    });
-  }, [printerIds]);
+  const rawJobs = data?.jobs || [];
 
-  // Sort: priority jobs first, then by created_at
+  // Sort: priority first, then by created_at
   const jobs = [...rawJobs].sort((a, b) => {
     if (a.priority && !b.priority) return -1;
     if (!a.priority && b.priority) return 1;
     return new Date(a.created_at) - new Date(b.created_at);
   });
 
+  // For 'active' tab, filter client-side on what came back
   const filtered = filter === 'active'
     ? jobs.filter(j => !['done', 'failed', 'cancelled'].includes(j.status))
-    : filter === 'done'
-    ? jobs.filter(j => j.status === 'done')
     : jobs;
 
   const counts = {
@@ -198,7 +171,7 @@ export default function JobQueuePage() {
     done:     jobs.filter(j => j.status === 'done').length,
   };
 
-  const priorityCount = jobs.filter(j => j.priority && !['done','failed','cancelled'].includes(j.status)).length;
+  const priorityCount = jobs.filter(j => j.priority && !['done', 'failed', 'cancelled'].includes(j.status)).length;
 
   return (
     <div style={{ padding: '36px 40px', maxWidth: 860 }}>
@@ -223,7 +196,7 @@ export default function JobQueuePage() {
           </div>
         </div>
         <button
-          onClick={() => qc.invalidateQueries({ queryKey: ['jobs'] })}
+          onClick={() => qc.invalidateQueries({ queryKey: ['admin-jobs'] })}
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', color: 'rgba(238,238,245,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
         >
           ↻ Refresh
@@ -251,7 +224,7 @@ export default function JobQueuePage() {
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {[['active','🔴 Active'], ['done','✅ Done'], ['all','All']].map(([val, label]) => (
+        {[['active', '🔴 Active'], ['done', '✅ Done'], ['all', 'All']].map(([val, label]) => (
           <button
             key={val} onClick={() => setFilter(val)}
             style={{
@@ -284,6 +257,12 @@ export default function JobQueuePage() {
               loading={isPending}
             />
           ))}
+        </div>
+      )}
+
+      {data?.total > 50 && (
+        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'rgba(238,238,245,0.3)' }}>
+          Showing 50 of {data.total} jobs
         </div>
       )}
     </div>

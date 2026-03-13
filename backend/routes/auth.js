@@ -16,8 +16,10 @@ router.post(
   login
 );
 
+// ✅ FIX BUG02: /register is admin-only at all times. Must supply a valid JWT.
 router.post(
   "/register",
+  auth,
   [
     body("college_id").notEmpty(),
     body("name").notEmpty(),
@@ -25,12 +27,6 @@ router.post(
     body("password").isLength({ min: 8 }),
   ],
   validate,
-  (req, res, next) => {
-    if (process.env.NODE_ENV === "production") {
-      return res.status(403).json({ error: "Registration disabled in production" });
-    }
-    next();
-  },
   register
 );
 

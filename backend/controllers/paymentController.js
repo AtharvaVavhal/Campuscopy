@@ -17,21 +17,14 @@ async function createPaymentOrder(req, res) {
 
     let finalAmount = parseFloat(job.cost);
 
-    // Apply coupon
+    // Apply coupon — ✅ FIX BUG07: use Coupon.validate() which checks is_active + expires_at
     if (coupon_code) {
-      const coupon = await Coupon.findByCode(coupon_code);
-      if (coupon && (coupon.uses_left === null || coupon.uses_left > 0)) {
-        let discount_amount = 0;
-        if (coupon.discount_type === "percent") {
-          discount_amount = parseFloat(((coupon.discount_value / 100) * finalAmount).toFixed(2));
-        } else {
-          discount_amount = parseFloat(coupon.discount_value);
-        }
-        discount_amount = Math.min(discount_amount, finalAmount);
-        finalAmount = parseFloat((finalAmount - discount_amount).toFixed(2));
+      const result = await Coupon.validate(coupon_code, finalAmount);
+      if (result.valid) {
+        finalAmount = result.final_amount;
         await db.query(
           `UPDATE jobs SET coupon_id = $1, discount_amount = $2 WHERE id = $3`,
-          [coupon.id, discount_amount, job_id]
+          [result.id, result.discount_amount, job_id]
         );
       }
     }
@@ -139,9 +132,11 @@ async function webhook(req, res) {
         );
       }
 
-      // Loyalty: earn 1 pt per ₹1 spent
+      // Loyalty: earn 1 pt per ₹1 of the FINAL amount paid (after discounts)
+      // ✅ FIX BUG08: use finalAmount from job record, not gross cost
       if (job.phone_number) {
-        const ptsEarned = Math.floor(parseFloat(job.cost));
+        const amountPaid = parseFloat(job.cost) - parseFloat(job.discount_amount || 0);
+        const ptsEarned = Math.floor(Math.max(amountPaid, 0));
         await db.query(
           `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
            VALUES ($1, $2, $3, 'earn', $4, $5)`,

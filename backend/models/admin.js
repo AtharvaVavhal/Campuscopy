@@ -1,30 +1,29 @@
-const pool = require("../config/db");
+// routes/admin.js
+const express = require("express");
+const router  = express.Router();
+const auth    = require("../middleware/auth");
+const {
+  getStats,
+  listJobs,
+  updateJobStatus,
+  getSettings,
+  updateSettings,
+  getAnalytics,
+} = require("../controllers/adminController");
 
-const Admin = {
-  async findByEmail(email) {
-    const { rows } = await pool.query(
-      "SELECT * FROM admins WHERE email = $1 LIMIT 1",
-      [email]
-    );
-    return rows[0] || null;
-  },
+// All admin routes require JWT auth
+router.use(auth);
 
-  async create({ college_id, name, email, password_hash }) {
-    const { rows } = await pool.query(
-      `INSERT INTO admins (college_id, name, email, password_hash)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, college_id, name, email, created_at`,
-      [college_id, name, email, password_hash]
-    );
-    return rows[0];
-  },
+// ── Dashboard ─────────────────────────────────────────────────
+router.get("/stats",     getStats);
+router.get("/analytics", getAnalytics);
 
-  async updateLastLogin(id) {
-    await pool.query(
-      "UPDATE admins SET last_login = NOW() WHERE id = $1",
-      [id]
-    );
-  },
-};
+// ── Jobs ──────────────────────────────────────────────────────
+router.get("/jobs",               listJobs);
+router.patch("/jobs/:id/status",  updateJobStatus);
 
-module.exports = Admin;
+// ── Settings ──────────────────────────────────────────────────
+router.get("/settings",   getSettings);
+router.patch("/settings", updateSettings);
+
+module.exports = router;

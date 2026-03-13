@@ -12,10 +12,15 @@ async function sendWhatsApp(to, body) {
     return;
   }
   const cleaned = to.replace(/\s+/g, "");
-  // Add +91 country code if not present
+  // Normalise to E.164 +91XXXXXXXXXX — handle numbers already prefixed with 91
   let withCountry = cleaned;
-  if (!withCountry.startsWith("+") && !withCountry.startsWith("whatsapp:")) {
-    withCountry = "+91" + withCountry;
+  if (!withCountry.startsWith("whatsapp:")) {
+    // Strip any leading + so we're working with raw digits
+    const digits = withCountry.replace(/^\+/, "");
+    // If number already starts with country code 91 and is 12 digits, keep it; otherwise prepend
+    withCountry = digits.startsWith("91") && digits.length === 12
+      ? "+" + digits
+      : "+91" + digits;
   }
   const toFormatted = withCountry.startsWith("whatsapp:") ? withCountry : `whatsapp:${withCountry}`;
   try {

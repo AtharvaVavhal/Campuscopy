@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 import requests
 import schedule
@@ -48,9 +49,10 @@ def print_pdf(file_path, job):
         # On Mac/Linux for testing, use lp:
         copies = job.get("copies", 1)
         color = job.get("color", False)
-        cmd = f'lp -n {copies} "{file_path}"'
-        log(f"Printing: {cmd}")
-        os.system(cmd)
+        # Use list form to avoid shell injection — never interpolate into a shell string
+        cmd = ["lp", "-n", str(copies), file_path]
+        log(f"Printing: {' '.join(cmd)}")
+        subprocess.run(cmd, check=True, timeout=60)
         return True
     except Exception as e:
         log(f"Print error: {e}")

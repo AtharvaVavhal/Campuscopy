@@ -78,14 +78,16 @@ const Job = {
 
   // ─── List by phone (order history) ──────────────────────
   async listByPhone(phone_number) {
+    // Normalise to bare 10-digit number so the index can be used
+    const bare = phone_number.replace(/^\+?91/, "").replace(/\D/g, "");
     const { rows } = await pool.query(
       `SELECT j.*, p.name AS printer_name, p.location AS printer_location
        FROM jobs j
        LEFT JOIN printers p ON j.printer_id = p.id
-       WHERE j.phone_number LIKE $1
+       WHERE RIGHT(j.phone_number, 10) = $1
        ORDER BY j.created_at DESC
        LIMIT 20`,
-      ["%" + phone_number.replace(/^\+?91/, "")]
+      [bare.slice(-10)]
     );
     return rows;
   },

@@ -10,8 +10,51 @@ const POINTS_TO_RUPEES = 0.10;   // 10 points = ₹1  →  100 points = ₹10
 const MIN_REDEEM = 50;           // minimum 50 points to redeem
 const MAX_REDEEM_PERCENT = 50;   // can't redeem more than 50% of job cost
 
+// ─── GET /api/loyalty/admin/summary (admin) ──────────────────
+// MUST be registered BEFORE /:phone or Express will swallow it
+router.get('/admin/summary', auth, async (req, res) => {
+  try {
+    const college_id = req.user?.college_id || 'college1';
+
+    const { rows: topStudents } = await db.query(
+      `SELECT
+         phone_number,
+         SUM(CASE WHEN type='earn'   THEN points ELSE 0 END)::int AS earned,
+         SUM(CASE WHEN type='redeem' THEN points ELSE 0 END)::int AS redeemed,
+         (SUM(CASE WHEN type='earn'  THEN points ELSE 0 END) -
+          SUM(CASE WHEN type='redeem'THEN points ELSE 0 END))::int AS balance
+       FROM loyalty_transactions
+       WHERE college_id = $1
+       GROUP BY phone_number
+       ORDER BY earned DESC
+       LIMIT 20`,
+      [college_id]
+    );
+
+    const { rows: totals } = await db.query(
+      `SELECT
+         COUNT(DISTINCT phone_number)::int  AS total_members,
+         COALESCE(SUM(CASE WHEN type='earn'   THEN points ELSE 0 END), 0)::int AS total_earned,
+         COALESCE(SUM(CASE WHEN type='redeem' THEN points ELSE 0 END), 0)::int AS total_redeemed
+       FROM loyalty_transactions WHERE college_id = $1`,
+      [college_id]
+    );
+
+    return res.json({
+      summary:          totals[0],
+      top_students:     topStudents,
+      points_to_rupees: POINTS_TO_RUPEES,
+      points_per_page:  POINTS_PER_PAGE,
+    });
+  } catch (err) {
+    console.error('Loyalty admin summary error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── GET /api/loyalty/:phone ─ get balance & history ─────────
-router.get('/:phone', async (req, res) => {
+// ✅ FIX BUG04: Requires authentication — loyalty data is sensitive
+router.get('/:phone', auth, async (req, res) => {
   try {
     const phone = decodeURIComponent(req.params.phone).replace(/\s/g, '');
 
@@ -127,47 +170,6 @@ router.post('/confirm-redeem', async (req, res) => {
   }
 });
 
-// ─── GET /api/loyalty/admin/summary (admin) ──────────────────
-router.get('/admin/summary', auth, async (req, res) => {
-  try {
-    const college_id = req.admin?.college_id || 'college1';
-
-    const { rows: topStudents } = await db.query(
-      `SELECT
-         phone_number,
-         SUM(CASE WHEN type='earn'   THEN points ELSE 0 END)::int AS earned,
-         SUM(CASE WHEN type='redeem' THEN points ELSE 0 END)::int AS redeemed,
-         (SUM(CASE WHEN type='earn'  THEN points ELSE 0 END) -
-          SUM(CASE WHEN type='redeem'THEN points ELSE 0 END))::int AS balance
-       FROM loyalty_transactions
-       WHERE college_id = $1
-       GROUP BY phone_number
-       ORDER BY earned DESC
-       LIMIT 20`,
-      [college_id]
-    );
-
-    const { rows: totals } = await db.query(
-      `SELECT
-         COUNT(DISTINCT phone_number)::int  AS total_members,
-         COALESCE(SUM(CASE WHEN type='earn'   THEN points ELSE 0 END), 0)::int AS total_earned,
-         COALESCE(SUM(CASE WHEN type='redeem' THEN points ELSE 0 END), 0)::int AS total_redeemed
-       FROM loyalty_transactions WHERE college_id = $1`,
-      [college_id]
-    );
-
-    return res.json({
-      summary: totals[0],
-      top_students: topStudents,
-      points_to_rupees: POINTS_TO_RUPEES,
-      points_per_page: POINTS_PER_PAGE,
-    });
-  } catch (err) {
-    console.error('Loyalty admin summary error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 module.exports = router;
-module.exports.POINTS_PER_PAGE = POINTS_PER_PAGE;
+module.exports.POINTS_PER_PAGE  = POINTS_PER_PAGE;
 module.exports.POINTS_TO_RUPEES = POINTS_TO_RUPEES;
