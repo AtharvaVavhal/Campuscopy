@@ -101,6 +101,29 @@ router.post('/:id/heartbeat', bridgeAuth, async (req, res) => {
   }
 });
 
+// ── Bridge — today's done/failed counts ──────────────────────
+// GET /api/printers/:id/stats
+// Header: x-api-key
+router.get('/:id/stats', bridgeAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'done'   AND updated_at >= CURRENT_DATE) AS done_today,
+         COUNT(*) FILTER (WHERE status = 'failed' AND updated_at >= CURRENT_DATE) AS failed_today
+       FROM jobs
+       WHERE printer_id = $1`,
+      [req.params.id]
+    );
+    return res.json({
+      done_today:   parseInt(rows[0].done_today,   10),
+      failed_today: parseInt(rows[0].failed_today, 10),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── Public — get job by QR token ─────────────────────────────
 // (handled in routes/jobs.js via /api/jobs/qr/:token)
 

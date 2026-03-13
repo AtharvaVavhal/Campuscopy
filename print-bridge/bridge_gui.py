@@ -211,9 +211,11 @@ class PrintBridgeApp(tk.Tk):
         ctrl.columnconfigure(0, weight=1)
         ctrl.columnconfigure(1, weight=1)
         ctrl.columnconfigure(2, weight=1)
+        ctrl.columnconfigure(3, weight=1)
         self._btn(ctrl, "↻ Refresh",   self._manual_refresh, VIOLET).grid(row=0, column=0, sticky="ew", padx=(0,4))
-        self._btn(ctrl, "✓ Mark Done", self._manual_done,    EMERALD).grid(row=0, column=1, sticky="ew", padx=4)
-        self._btn(ctrl, "✗ Mark Fail", self._manual_fail,    RED).grid(row=0, column=2, sticky="ew", padx=(4,0))
+        self._btn(ctrl, "💰 Mark Paid", self._manual_paid,    GOLD).grid(row=0, column=1, sticky="ew", padx=4)
+        self._btn(ctrl, "✓ Mark Done", self._manual_done,    EMERALD).grid(row=0, column=2, sticky="ew", padx=4)
+        self._btn(ctrl, "✗ Mark Fail", self._manual_fail,    RED).grid(row=0, column=3, sticky="ew", padx=(4,0))
 
         # ── Log (right) ──
         right = tk.Frame(body, bg=BG)
@@ -375,14 +377,25 @@ class PrintBridgeApp(tk.Tk):
                 self.jobs = jobs
                 self.after(0, self._refresh_tree, jobs)
 
+                active = [j for j in jobs if j["status"] in ("pending", "paid", "queued", "printing")]
                 paid   = [j for j in jobs if j["status"] == "paid"]
-                queued = [j for j in jobs if j["status"] in ("paid","queued","printing")]
-                done   = len([j for j in jobs if j["status"] == "done"])
-                failed = len([j for j in jobs if j["status"] == "failed"])
 
-                self.after(0, self.stat_vars["queued_count"].set, str(len(queued)))
-                self.after(0, self.stat_vars["done_today"].set,   str(done))
-                self.after(0, self.stat_vars["failed_today"].set, str(failed))
+                self.after(0, self.stat_vars["queued_count"].set, str(len(active)))
+
+                # done/failed counts come from a separate stats endpoint since the
+                # printer-jobs API only returns active statuses
+                def fetch_stats():
+                    try:
+                        sr = requests.get(
+                            f"{API_URL}/api/printers/{self.printer_id}/stats",
+                            headers=headers, timeout=5)
+                        if sr.status_code == 200:
+                            sd = sr.json()
+                            self.after(0, self.stat_vars["done_today"].set,   str(sd.get("done_today",   0)))
+                            self.after(0, self.stat_vars["failed_today"].set, str(sd.get("failed_today", 0)))
+                    except Exception:
+                        pass  # stats are non-critical, fail silently
+                threading.Thread(target=fetch_stats, daemon=True).start()
 
                 new_paid = []
                 with self._in_progress_lock:
@@ -499,12 +512,21 @@ class PrintBridgeApp(tk.Tk):
                                     "-print-settings", settings, file_path],
                                    check=True, timeout=60)
                 else:
-                    import win32api
-                    # ShellExecute print verb ignores lpParameters for most handlers;
-                    # prints to default printer, 1 copy. SumatraPDF is strongly preferred.
-                    for _ in range(copies):
-                        win32api.ShellExecute(0, "print", file_path, None, ".", 0)
-                        time.sleep(2)  # brief gap between submissions
+                    try:
+                        import win32api
+                        # ShellExecute print verb ignores lpParameters for most handlers;
+                        # prints to default printer, 1 copy. SumatraPDF is strongly preferred.
+                        for _ in range(copies):
+                            win32api.ShellExecute(0, "print", file_path, None, ".", 0)
+                            time.sleep(2)  # brief gap between submissions
+                    except ImportError:
+                        # pywin32 not installed — fall back to ShellExecute via subprocess
+                        for _ in range(copies):
+                            subprocess.run(
+                                ["rundll32.exe", "mshtml.dll,PrintHTML", file_path],
+                                timeout=60
+                            )
+                            time.sleep(2)
             else:
                 # macOS / Linux
                 cmd = ["lp", "-n", str(copies)]
@@ -524,9 +546,13 @@ class PrintBridgeApp(tk.Tk):
     def _update_status(self, job_id, status):
         headers = {"x-api-key": self.api_key}
         try:
-            requests.patch(f"{API_URL}/api/jobs/{job_id}/status",
-                           json={"status": status}, headers=headers, timeout=5)
-            self.after(0, self.log, f"  → {status.upper()}", "dim")
+            r = requests.patch(f"{API_URL}/api/jobs/{job_id}/status",
+                               json={"status": status}, headers=headers, timeout=5)
+            if r.status_code == 200:
+                self.after(0, self.log, f"  → {status.upper()}", "dim")
+            else:
+                err_msg = r.json().get("error", r.text) if r.content else str(r.status_code)
+                self.after(0, self.log, f"  Status update rejected ({r.status_code}): {err_msg}", "err")
         except Exception as e:
             self.after(0, self.log, f"Status update error: {e}", "err")
 
@@ -538,6 +564,18 @@ class PrintBridgeApp(tk.Tk):
             messagebox.showinfo("No selection", "Select a job from the queue first.")
             return None
         return sel[0]
+
+    def _manual_paid(self):
+        job_id = self._selected_job_id()
+        if not job_id: return
+        job = next((j for j in self.jobs if j["id"] == job_id), None)
+        if not job: return
+        fname = job.get("file_name", job_id[:8])
+        cost  = job.get("cost", "?")
+        if messagebox.askyesno("Confirm Cash Payment", f"Mark ₹{cost} as PAID for:\n{fname}?\n\nThis will queue it for printing."):
+            self._update_status(job_id, "paid")
+            self.log(f"Cash payment confirmed: {fname} (₹{cost})", "ok")
+            self.after(2000, self._poll_queue)
 
     def _manual_done(self):
         job_id = self._selected_job_id()
@@ -568,4 +606,4 @@ class PrintBridgeApp(tk.Tk):
 
 if __name__ == "__main__":
     app = PrintBridgeApp()
-    app.mainloop()  
+    app.mainloop()
