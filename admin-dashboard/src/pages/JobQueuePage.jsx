@@ -121,12 +121,26 @@ export default function JobQueuePage() {
 
   const { mutate: updateStatus, isPending } = useMutation({
     mutationFn: ({ id, status }) => api.patch(`/api/jobs/${id}/status`, { status }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ['jobs'] });
+      const prev = qc.getQueryData(['jobs']);
+      qc.setQueryData(['jobs'], old => ({
+        ...old,
+        jobs: (old?.jobs || []).map(j => j.id === id ? { ...j, status } : j),
+      }));
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => qc.setQueryData(['jobs'], ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
   });
 
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
-    s.emit('join_printer', PRINTER_ID);
+
+    const joinRoom = () => s.emit('join_printer', PRINTER_ID);
+    s.on('connect', joinRoom);
+    s.on('reconnect', joinRoom);
+
     s.on('queue_update', () => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
       setUpdates(u => u + 1);
