@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import api from '../api/client';
 
 const SOCKET_URL = 'https://campuscopy-api.onrender.com';
-const PRINTER_ID = '5b4bedf3-3550-4faa-ac3d-d4f490772258';
+const PRINTER_ID = '21f13e16-09de-4f77-a417-9efe3f12521f';
 
 const STATUS_COLORS = {
   pending:  { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.2)'  },
@@ -15,8 +15,8 @@ const STATUS_COLORS = {
   failed:   { bg: 'rgba(248,113,113,0.1)', color: '#f87171', border: 'rgba(248,113,113,0.2)' },
 };
 
-const NEXT = { paid: 'queued', queued: 'printing', printing: 'done' };
-const NEXT_LABEL = { paid: '→ Queue', queued: '→ Print', printing: '✓ Done' };
+const NEXT = { pending: 'queued', paid: 'queued', queued: 'printing', printing: 'done' };
+const NEXT_LABEL = { pending: '→ Queue', paid: '→ Queue', queued: '→ Print', printing: '✓ Done' };
 
 function Badge({ status }) {
   const s = STATUS_COLORS[status] || STATUS_COLORS.pending;
@@ -148,6 +148,7 @@ export default function JobQueuePage() {
     : jobs;
 
   const counts = {
+    pending:  jobs.filter(j => j.status === 'pending').length,
     paid:     jobs.filter(j => j.status === 'paid').length,
     queued:   jobs.filter(j => j.status === 'queued').length,
     printing: jobs.filter(j => j.status === 'printing').length,
@@ -187,9 +188,10 @@ export default function JobQueuePage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 28 }}>
         {[
-          { label: 'Paid',     val: counts.paid,     color: '#fbbf24' },
+          { label: 'Pending',  val: counts.pending,  color: '#fbbf24' },
+          { label: 'Paid',     val: counts.paid,     color: '#34d399' },
           { label: 'Queued',   val: counts.queued,   color: '#60a5fa' },
           { label: 'Printing', val: counts.printing, color: '#a78bfa' },
           { label: 'Done',     val: counts.done,     color: '#34d399' },
