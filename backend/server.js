@@ -59,7 +59,7 @@ app.use("/api/", rateLimit({
   message: { error: "Too many requests, please try again later." },
 }));
 
-app.use("/api/auth",     require("./routes/auth"));
+app.use("/api/auth",     require("./routes/auth_routes"));
 app.use("/api/jobs",     require("./routes/jobs"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/printers", require("./routes/printers"));

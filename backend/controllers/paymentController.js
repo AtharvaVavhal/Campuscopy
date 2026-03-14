@@ -10,10 +10,20 @@ async function createPaymentOrder(req, res) {
   if (!job_id) return res.status(400).json({ error: "job_id is required" });
 
   try {
-    const { rows } = await db.query("SELECT * FROM jobs WHERE id = $1", [job_id]);
+    const { rows } = await db.query(
+      `SELECT j.*, c.razorpay_key_id, c.razorpay_key_secret
+       FROM jobs j
+       LEFT JOIN colleges c ON c.id = j.college_id
+       WHERE j.id = $1`,
+      [job_id]
+    );
     const job = rows[0];
     if (!job)                     return res.status(404).json({ error: "Job not found" });
     if (job.status !== "pending") return res.status(400).json({ error: "Job is not pending" });
+
+    // Use college-specific Razorpay keys if set, otherwise fall back to env
+    const rzpKeyId     = job.razorpay_key_id     || process.env.RAZORPAY_KEY_ID;
+    const rzpKeySecret = job.razorpay_key_secret || process.env.RAZORPAY_KEY_SECRET;
 
     let finalAmount = parseFloat(job.cost);
 
@@ -51,7 +61,8 @@ async function createPaymentOrder(req, res) {
       );
     }
 
-    const order = await createOrder({ amount: finalAmount, receipt: job_id });
+    const { createOrder } = require("../utils/razorpay");
+    const order = await createOrder({ amount: finalAmount, receipt: job_id }, rzpKeyId, rzpKeySecret);
 
     await db.query(
       `UPDATE jobs SET razorpay_order_id = $1 WHERE id = $2`,
@@ -62,7 +73,7 @@ async function createPaymentOrder(req, res) {
       order_id:     order.id,
       amount:       order.amount,   // paise
       currency:     order.currency,
-      key_id:       process.env.RAZORPAY_KEY_ID,
+      key_id:       rzpKeyId,       // return college-specific key to PWA
       final_amount: finalAmount,
     });
   } catch (err) {

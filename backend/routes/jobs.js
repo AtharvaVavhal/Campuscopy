@@ -8,6 +8,7 @@ const QRCode  = require("qrcode");
 const { v4: uuidv4 } = require("uuid");
 const db      = require("../config/db");
 const authMiddleware  = require("../middleware/auth");
+const studentAuth     = require("../middleware/studentAuth");
 const upload  = require("../middleware/upload");   // BUG09: use shared multer config
 const { notifyJobStatus } = require("../utils/whatsapp");
 const { sendPush, buildPayload } = require("../utils/push");
@@ -134,22 +135,52 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // ─── GET /api/jobs/by-phone/:phone ───────────────────────────
-// ✅ FIX BUG03: Requires JWT — student must be authenticated to see their own jobs
-router.get("/by-phone/:phone", authMiddleware, async (req, res) => {
-  try {
-    const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
-    const result = await db.query(
-      `SELECT j.*, p.name AS printer_name, p.location AS printer_location
-       FROM jobs j
-       LEFT JOIN printers p ON p.id = j.printer_id
-       WHERE j.phone_number LIKE $1
-       ORDER BY j.created_at DESC LIMIT 50`,
-      ["%" + phone.replace(/^\+?91/, "")]
-    );
-    res.json({ jobs: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch history" });
-  }
+// Accepts admin JWT (authMiddleware) or student JWT (studentAuth)
+// Students can only query their own phone number.
+router.get("/by-phone/:phone", async (req, res, next) => {
+  // Try student auth first, then admin auth
+  studentAuth(req, res, async (studentErr) => {
+    if (!studentErr && req.student) {
+      // Student authenticated — enforce phone match
+      const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
+      const studentLast10 = req.student.phone.replace(/^\+?91/, "").slice(-10);
+      const queryLast10   = phone.replace(/^\+?91/, "").slice(-10);
+      if (studentLast10 !== queryLast10) {
+        return res.status(403).json({ error: "You can only view your own orders" });
+      }
+      try {
+        const result = await db.query(
+          `SELECT j.*, p.name AS printer_name, p.location AS printer_location
+           FROM jobs j
+           LEFT JOIN printers p ON p.id = j.printer_id
+           WHERE j.phone_number LIKE $1
+           ORDER BY j.created_at DESC LIMIT 50`,
+          ["%" + studentLast10]
+        );
+        return res.json({ jobs: result.rows });
+      } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch history" });
+      }
+    }
+    // Fall back to admin JWT
+    authMiddleware(req, res, async (adminErr) => {
+      if (adminErr) return res.status(401).json({ error: "Authentication required" });
+      try {
+        const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
+        const result = await db.query(
+          `SELECT j.*, p.name AS printer_name, p.location AS printer_location
+           FROM jobs j
+           LEFT JOIN printers p ON p.id = j.printer_id
+           WHERE j.phone_number LIKE $1
+           ORDER BY j.created_at DESC LIMIT 50`,
+          ["%" + phone.replace(/^\+?91/, "")]
+        );
+        return res.json({ jobs: result.rows });
+      } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch history" });
+      }
+    });
+  });
 });
 
 // ─── GET /api/jobs/printer/:printer_id (print bridge) ────────

@@ -262,6 +262,17 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
 .inline-input:focus{border-color:rgba(167,139,250,0.4);box-shadow:0 0 0 3px rgba(167,139,250,0.08);}
 .inline-btn{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:12px;padding:12px 18px;color:var(--violet);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;}
 .inline-btn:hover{background:rgba(167,139,250,0.2);border-color:rgba(167,139,250,0.4);}
+
+/* ── OTP LOGIN ── */
+.auth-pill{display:flex;align-items:center;gap:7px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:20px;padding:6px 13px;font-size:11px;color:var(--violet);font-weight:600;letter-spacing:0.3px;cursor:pointer;transition:all 0.2s;}
+.auth-pill:hover{background:rgba(167,139,250,0.14);border-color:rgba(167,139,250,0.35);}
+.auth-pill.logged-in{background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.2);color:var(--emerald);}
+.otp-box{margin:0 20px;display:flex;gap:10px;}
+.otp-digit{flex:1;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);border-radius:14px;padding:0;height:64px;font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--text);outline:none;text-align:center;transition:border-color 0.25s,box-shadow 0.25s;}
+.otp-digit:focus{border-color:rgba(167,139,250,0.6);box-shadow:0 0 0 3px rgba(167,139,250,0.12);background:rgba(167,139,250,0.04);}
+.otp-digit.filled{border-color:rgba(167,139,250,0.4);}
+.resend-link{background:none;border:none;color:var(--violet);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;text-decoration:underline;padding:0;margin-top:4px;}
+.resend-link:disabled{opacity:0.35;cursor:not-allowed;text-decoration:none;}
 </style>
 </head>
 <body>
@@ -274,7 +285,10 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
 <div class="screen active" id="screen-upload">
   <div class="topbar">
     <div class="logo">CampusCopy</div>
-    <div class="live-pill"><div class="live-dot"></div>VIT Pune</div>
+    <button class="auth-pill" id="auth-pill" onclick="onAuthPillClick()">
+      <span id="auth-pill-icon">👤</span>
+      <span id="auth-pill-label">Log In</span>
+    </button>
   </div>
   <div class="ptitle">
     <h1>Print <span>anything.</span></h1>
@@ -510,10 +524,60 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
   </div>
 
   <button class="btn btn-ghost" onclick="goScreen('upload')" style="margin-top:16px;">+ NEW PRINT JOB</button>
-  <button class="btn btn-ghost" onclick="goScreen('history')" style="margin-top:8px;">📋 MY ORDER HISTORY</button>
+  <button class="btn btn-ghost" onclick="goHistory()" style="margin-top:8px;">📋 MY ORDER HISTORY</button>
 </div>
 
-<!-- ══════════════ SCREEN 4: ORDER HISTORY ══════════════ -->
+<!-- ══════════════ SCREEN 4: OTP LOGIN ══════════════ -->
+<div class="screen" id="screen-otp">
+  <div class="topbar">
+    <button class="back-btn" id="otp-back-btn" onclick="goScreen('upload')">← Back</button>
+    <div class="logo">CampusCopy</div>
+  </div>
+  <div class="ptitle">
+    <h1 id="otp-title">Sign <span>In.</span></h1>
+    <p id="otp-subtitle">Enter your phone to receive a 6-digit OTP via WhatsApp</p>
+  </div>
+
+  <!-- Step 1: phone entry -->
+  <div id="otp-step-phone">
+    <div class="card">
+      <div class="field" style="margin-top:0;">
+        <label>📱 WhatsApp Number</label>
+        <input type="tel" id="otp-phone-input" placeholder="+91 98765 43210"
+          onkeydown="if(event.key==='Enter')sendOtp()"/>
+        <div class="field-hint">We'll send a 6-digit code to this WhatsApp number</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="sendOtp()" id="otp-send-btn">SEND OTP →</button>
+    <div id="otp-phone-err" style="text-align:center;font-size:13px;color:var(--danger);margin-top:10px;display:none;"></div>
+  </div>
+
+  <!-- Step 2: OTP entry -->
+  <div id="otp-step-verify" style="display:none;">
+    <div class="card" style="text-align:center;padding:28px 20px;">
+      <div style="font-size:40px;margin-bottom:12px;">📩</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px;">Code sent!</div>
+      <div style="font-size:13px;color:var(--muted);" id="otp-sent-to">Check your WhatsApp</div>
+    </div>
+    <div style="padding:20px 20px 0;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Enter 6-Digit Code</div>
+    <div class="otp-box" id="otp-box">
+      <input class="otp-digit" maxlength="1" inputmode="numeric" type="tel" onkeyup="otpKey(this,0,event)"/>
+      <input class="otp-digit" maxlength="1" inputmode="numeric" type="tel" onkeyup="otpKey(this,1,event)"/>
+      <input class="otp-digit" maxlength="1" inputmode="numeric" type="tel" onkeyup="otpKey(this,2,event)"/>
+      <input class="otp-digit" maxlength="1" inputmode="numeric" type="tel" onkeyup="otpKey(this,3,event)"/>
+      <input class="otp-digit" maxlength="1" inputmode="numeric" type="tel" onkeyup="otpKey(this,4,event)"/>
+      <input class="otp-digit" maxlength="1" inputmode="numeric" type="tel" onkeyup="otpKey(this,5,event)"/>
+    </div>
+    <button class="btn btn-primary" onclick="verifyOtp()" id="otp-verify-btn" style="margin-top:20px;" disabled>VERIFY →</button>
+    <div id="otp-verify-err" style="text-align:center;font-size:13px;color:var(--danger);margin-top:10px;display:none;"></div>
+    <div style="text-align:center;margin-top:16px;">
+      <button class="resend-link" id="resend-btn" onclick="resendOtp()" disabled>Resend code</button>
+      <span id="resend-timer" style="font-size:12px;color:var(--muted);margin-left:6px;"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SCREEN 5: ORDER HISTORY ══════════════ -->
 <div class="screen" id="screen-history">
   <div class="topbar">
     <button class="back-btn" onclick="goScreen('upload')">← Back</button>
@@ -521,9 +585,9 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
   </div>
   <div class="ptitle">
     <h1>Your <span>Orders.</span></h1>
-    <p>Look up past prints by phone number</p>
+    <p id="history-subtitle">Your past print jobs</p>
   </div>
-  <div class="card">
+  <div class="card" id="history-phone-card">
     <div class="field" style="margin-top:0;">
       <label>📱 WhatsApp Number</label>
       <input type="tel" id="history-phone" placeholder="+91 98765 43210" oninput="clearHistory()"/>
@@ -542,6 +606,157 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
 const API = 'https://campuscopy-api.onrender.com';
 let job = null, socket = null;
 let pdfDoc = null, currentPage = 1;
+
+// ─── Student Auth State ───────────────────────────────────────
+const auth = {
+  get token()  { return localStorage.getItem('cc_token'); },
+  get phone()  { return localStorage.getItem('cc_phone'); },
+  get loggedIn(){ return !!this.token && !!this.phone; },
+  save(token, phone) { localStorage.setItem('cc_token', token); localStorage.setItem('cc_phone', phone); },
+  clear()      { localStorage.removeItem('cc_token'); localStorage.removeItem('cc_phone'); },
+  headers()    { return this.token ? { 'Authorization': 'Bearer ' + this.token } : {}; },
+};
+
+function updateAuthPill() {
+  const pill  = document.getElementById('auth-pill');
+  const icon  = document.getElementById('auth-pill-icon');
+  const label = document.getElementById('auth-pill-label');
+  if (auth.loggedIn) {
+    pill.classList.add('logged-in');
+    icon.textContent  = '✅';
+    label.textContent = auth.phone.slice(-4).padStart(auth.phone.length, '•').slice(-8);
+    // Auto-fill phone field and load loyalty balance
+    const phoneEl = document.getElementById('phone');
+    if (phoneEl && !phoneEl.value) { phoneEl.value = auth.phone; }
+  } else {
+    pill.classList.remove('logged-in');
+    icon.textContent  = '👤';
+    label.textContent = 'Log In';
+  }
+}
+
+function onAuthPillClick() {
+  if (auth.loggedIn) {
+    if (confirm('Log out of ' + auth.phone + '?')) { auth.clear(); updateAuthPill(); toast('👋 Logged out', ''); }
+  } else {
+    goScreen('otp');
+  }
+}
+
+// ─── OTP Flow ─────────────────────────────────────────────────
+let _otpPhone = '', _resendTimer = null;
+
+async function sendOtp() {
+  const raw = document.getElementById('otp-phone-input').value.trim();
+  if (!raw || raw.replace(/\D/g,'').length < 10) {
+    document.getElementById('otp-phone-err').style.display='block';
+    document.getElementById('otp-phone-err').textContent='⚠️ Enter a valid 10-digit phone number'; return;
+  }
+  _otpPhone = raw;
+  const btn = document.getElementById('otp-send-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>SENDING…';
+  document.getElementById('otp-phone-err').style.display='none';
+  try {
+    const r = await fetch(API + '/api/auth/otp/send', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: _otpPhone })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to send OTP');
+    document.getElementById('otp-step-phone').style.display='none';
+    document.getElementById('otp-step-verify').style.display='block';
+    document.getElementById('otp-title').textContent='Verify';
+    document.getElementById('otp-subtitle').textContent='Code sent to your WhatsApp';
+    document.getElementById('otp-sent-to').textContent='Sent to ' + _otpPhone;
+    // Dev shortcut
+    if (d._dev_otp) {
+      const digits = document.querySelectorAll('.otp-digit');
+      d._dev_otp.split('').forEach((c,i) => { digits[i].value=c; digits[i].classList.add('filled'); });
+      document.getElementById('otp-verify-btn').disabled=false;
+      toast('🧪 Dev mode — OTP auto-filled', 'ok');
+    }
+    startResendTimer(30);
+    document.querySelectorAll('.otp-digit')[0].focus();
+  } catch(e) {
+    document.getElementById('otp-phone-err').style.display='block';
+    document.getElementById('otp-phone-err').textContent='❌ ' + e.message;
+  } finally { btn.disabled=false; btn.innerHTML='SEND OTP →'; }
+}
+
+function otpKey(el, idx, e) {
+  if (e.key==='Backspace' && !el.value && idx>0) {
+    const digits=document.querySelectorAll('.otp-digit');
+    digits[idx-1].focus(); digits[idx-1].value=''; digits[idx-1].classList.remove('filled'); return;
+  }
+  if (el.value && idx<5) { document.querySelectorAll('.otp-digit')[idx+1].focus(); }
+  el.classList.toggle('filled', !!el.value);
+  const all = [...document.querySelectorAll('.otp-digit')].map(d=>d.value).join('');
+  document.getElementById('otp-verify-btn').disabled = all.length < 6;
+}
+
+async function verifyOtp() {
+  const otp = [...document.querySelectorAll('.otp-digit')].map(d=>d.value).join('');
+  if (otp.length < 6) return;
+  const btn = document.getElementById('otp-verify-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>VERIFYING…';
+  document.getElementById('otp-verify-err').style.display='none';
+  try {
+    const r = await fetch(API + '/api/auth/otp/verify', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: _otpPhone, otp })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Invalid OTP');
+    auth.save(d.token, d.phone);
+    clearResendTimer();
+    toast('🎉 Welcome! Logged in as ' + d.phone, 'ok');
+    updateAuthPill();
+    // Auto-fill phone on upload screen
+    const phoneEl = document.getElementById('phone');
+    if (phoneEl) { phoneEl.value = d.phone; }
+    // Reset OTP screen for next time
+    resetOtpScreen();
+    // Go to history if that was the goal, else back to upload
+    const dest = document.getElementById('otp-back-btn').dataset.dest || 'upload';
+    goScreen(dest);
+    if (dest==='history') setTimeout(loadHistoryAuto, 300);
+  } catch(e) {
+    document.getElementById('otp-verify-err').style.display='block';
+    document.getElementById('otp-verify-err').textContent='❌ ' + e.message;
+    document.querySelectorAll('.otp-digit').forEach(d=>{d.value='';d.classList.remove('filled');});
+    document.querySelectorAll('.otp-digit')[0].focus();
+    btn.disabled=false; btn.innerHTML='VERIFY →';
+  }
+}
+
+async function resendOtp() {
+  document.getElementById('resend-btn').disabled=true;
+  await sendOtp();
+  startResendTimer(30);
+}
+
+function startResendTimer(secs) {
+  clearResendTimer();
+  let s=secs;
+  const btn=document.getElementById('resend-btn');
+  const timer=document.getElementById('resend-timer');
+  btn.disabled=true;
+  _resendTimer=setInterval(()=>{
+    s--; timer.textContent='('+s+'s)';
+    if(s<=0){clearResendTimer();btn.disabled=false;timer.textContent='';}
+  },1000);
+  timer.textContent='('+s+'s)';
+}
+function clearResendTimer(){ if(_resendTimer){clearInterval(_resendTimer);_resendTimer=null;} }
+function resetOtpScreen(){
+  document.getElementById('otp-step-phone').style.display='block';
+  document.getElementById('otp-step-verify').style.display='none';
+  document.getElementById('otp-title').textContent='Sign In';
+  document.getElementById('otp-phone-input').value='';
+  document.querySelectorAll('.otp-digit').forEach(d=>{d.value='';d.classList.remove('filled');});
+  document.getElementById('otp-phone-err').style.display='none';
+  document.getElementById('otp-verify-err').style.display='none';
+}
 
 // ─── Service Worker + Push Notifications ─────────────────────
 let swRegistration = null;
@@ -740,7 +955,6 @@ async function doUpload() {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Upload failed');
     job = d.job;
-    // FIX: keep currentJobId in sync so SW message handler can use it
     window._currentJobId = job.id;
     document.getElementById('p-fname').textContent = job.file_name;
     document.getElementById('p-fmeta').textContent = job.pages + ' pages · ' + job.copies + ' cop' + (job.copies>1?'ies':'y');
@@ -753,11 +967,11 @@ async function doUpload() {
       document.getElementById('p-range-text').textContent = job.page_from + ' to ' + job.page_to;
     } else { document.getElementById('p-range-row').style.display = 'none'; }
     document.getElementById('p-priority-badge').style.display = job.priority ? 'flex' : 'none';
-    const _phone = document.getElementById('phone').value.trim();
     appliedLoyaltyPoints = 0;
     document.getElementById('loyalty-toggle').checked = false;
     document.getElementById('loyalty-redeem-wrap').style.display = 'none';
     document.getElementById('p-loyalty-line').style.display = 'none';
+    const _phone = document.getElementById('phone').value.trim();
     if (_phone) loadLoyaltyBalance(_phone); else document.getElementById('loyalty-card').style.display = 'none';
     goScreen('payment');
   } catch (e) { toast('❌ ' + e.message, 'err'); }
@@ -813,7 +1027,12 @@ async function doPayment() {
   try {
     const r = await fetch(API + '/api/payments/create-order', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: job.id, coupon_code: appliedCoupon?.code || null, loyalty_points: appliedLoyaltyPoints||0, phone: document.getElementById('phone').value.trim()||null })
+      body: JSON.stringify({
+        job_id: job.id,
+        coupon_code: appliedCoupon?.code || null,
+        loyalty_points: appliedLoyaltyPoints || 0,
+        phone: document.getElementById('phone').value.trim() || null
+      })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Order failed');
@@ -913,14 +1132,49 @@ uz.addEventListener('drop', e => {
 
 // ─── Order History ────────────────────────────────────────────
 function clearHistory() { document.getElementById('history-results').innerHTML = ''; }
+
+function goHistory() {
+  if (!auth.loggedIn) {
+    // Need to log in first — come back to history after
+    document.getElementById('otp-back-btn').dataset.dest = 'history';
+    resetOtpScreen();
+    goScreen('otp');
+  } else {
+    goScreen('history');
+    setTimeout(loadHistoryAuto, 300);
+  }
+}
+
+function loadHistoryAuto() {
+  if (auth.loggedIn) {
+    document.getElementById('history-phone').value = auth.phone;
+    document.getElementById('history-phone-card').style.display = 'none';
+    document.getElementById('history-subtitle').textContent = 'Logged in as ' + auth.phone;
+    loadHistory();
+  }
+}
+
 async function loadHistory() {
-  const raw = document.getElementById('history-phone').value.trim();
+  const raw = document.getElementById('history-phone').value.trim() || (auth.loggedIn ? auth.phone : '');
   if (!raw) { toast('⚠️ Enter your phone number', 'err'); return; }
   const results = document.getElementById('history-results');
   results.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;"><span class="spin" style="border-top-color:var(--violet);border-color:rgba(167,139,250,0.2);"></span> Loading…</div>';
+
+  // Build headers — student JWT if logged in, else anonymous (will 401 for unauthenticated users)
+  const headers = auth.loggedIn ? { 'Authorization': 'Bearer ' + auth.token } : {};
+
   try {
     const phone = encodeURIComponent(raw.replace(/\s/g, ''));
-    const r = await fetch(API + '/api/jobs/by-phone/' + phone);
+    const r = await fetch(API + '/api/jobs/by-phone/' + phone, { headers });
+    if (r.status === 401) {
+      results.innerHTML = '';
+      document.getElementById('history-phone-card').style.display = 'block';
+      toast('🔐 Please log in to view your orders', 'err');
+      document.getElementById('otp-back-btn').dataset.dest = 'history';
+      resetOtpScreen();
+      setTimeout(() => goScreen('otp'), 600);
+      return;
+    }
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed');
     if (!d.jobs.length) {
@@ -928,13 +1182,13 @@ async function loadHistory() {
       return;
     }
     const statusColors = { pending:'var(--warning)', paid:'var(--emerald)', queued:'#60a5fa', printing:'var(--violet)', done:'var(--emerald)', failed:'var(--danger)' };
-    const statusIcons = { pending:'⏳', paid:'💰', queued:'📋', printing:'🖨️', done:'✅', failed:'❌' };
+    const statusIcons  = { pending:'⏳', paid:'💰', queued:'📋', printing:'🖨️', done:'✅', failed:'❌' };
     results.innerHTML = '<div style="padding:14px 20px 8px;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;">' + d.jobs.length + ' order' + (d.jobs.length > 1 ? 's' : '') + ' found</div>' +
       d.jobs.map(j => {
         const date = new Date(j.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
         const time = new Date(j.created_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
         const type = (j.color ? 'Color' : 'B&W') + (j.double_sided ? ' · 2-sided' : '');
-        const col = statusColors[j.status] || 'var(--muted)';
+        const col  = statusColors[j.status] || 'var(--muted)';
         const icon = statusIcons[j.status] || '⏳';
         const priorityTag = j.priority ? '<span style="font-size:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:20px;padding:3px 9px;color:#f59e0b;font-weight:700;margin-left:6px;flex-shrink:0;">⚡</span>' : '';
         return `<div class="history-job" style="${j.priority ? 'border-color:rgba(245,158,11,0.18);' : ''}">
@@ -962,25 +1216,37 @@ async function loadHistory() {
 
 // ─── Loyalty Points ───────────────────────────────────────────
 let loyaltyBalance = 0, appliedLoyaltyPoints = 0;
+
 async function loadLoyaltyBalance(phone) {
-  if (!phone || phone.length < 10) { document.getElementById('loyalty-card').style.display='none'; return; }
+  if (!phone || phone.replace(/\D/g,'').length < 10) {
+    document.getElementById('loyalty-card').style.display='none'; return;
+  }
   try {
-    const r = await fetch(API + '/api/loyalty/' + encodeURIComponent(phone.replace(/\s/g,'')));
-    const d = await r.json();
-    if (!r.ok) return;
+    let r, d;
+    // Prefer the student JWT endpoint (returns balance for the token's phone)
+    if (auth.loggedIn) {
+      r = await fetch(API + '/api/loyalty/balance', { headers: auth.headers() });
+      d = await r.json();
+    } else {
+      // Fallback: the old admin-auth endpoint won't work here, so hide loyalty
+      document.getElementById('loyalty-card').style.display='none'; return;
+    }
+    if (!r.ok) { document.getElementById('loyalty-card').style.display='none'; return; }
     loyaltyBalance = d.balance || 0;
-    const card = document.getElementById('loyalty-card');
+    const card  = document.getElementById('loyalty-card');
     const label = document.getElementById('loyalty-balance-label');
     if (loyaltyBalance >= 50) {
       card.style.display = 'block';
       label.textContent = loyaltyBalance + ' pts available · worth ₹' + d.rupee_value;
+      document.getElementById('loyalty-toggle').disabled = false;
     } else if (loyaltyBalance > 0) {
       card.style.display = 'block';
       label.innerHTML = loyaltyBalance + ' pts <span style="color:var(--muted);">(need 50 to redeem)</span>';
       document.getElementById('loyalty-toggle').disabled = true;
     } else { card.style.display = 'none'; }
-  } catch {}
+  } catch { document.getElementById('loyalty-card').style.display='none'; }
 }
+
 function toggleLoyalty() {
   const on = document.getElementById('loyalty-toggle').checked;
   document.getElementById('loyalty-redeem-wrap').style.display = on ? 'block' : 'none';
@@ -995,7 +1261,7 @@ function toggleLoyalty() {
 function applyMaxLoyalty() {
   if (!job) return;
   const base = appliedCoupon ? appliedCoupon.final_amount : parseFloat(job.cost);
-  const max = Math.min(Math.floor(base*50/10)*10, loyaltyBalance);
+  const max  = Math.min(Math.floor(base*50/10)*10, loyaltyBalance);
   document.getElementById('loyalty-pts-input').value = max;
   updateLoyaltyDiscount();
 }
@@ -1024,7 +1290,9 @@ function updateLoyaltyDiscount() {
   document.getElementById('p-original-cost').textContent='₹'+job.cost;
 }
 
+// ─── Init ─────────────────────────────────────────────────────
 loadPrinters();
+updateAuthPill();
 </script>
 
 <script>

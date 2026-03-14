@@ -3,12 +3,43 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const auth = require('../middleware/auth');
+const studentAuth = require('../middleware/studentAuth');
 
 // ─── Points config ────────────────────────────────────────────
-const POINTS_PER_PAGE = 1;       // 1 point per page printed
-const POINTS_TO_RUPEES = 0.10;   // 10 points = ₹1  →  100 points = ₹10
-const MIN_REDEEM = 50;           // minimum 50 points to redeem
-const MAX_REDEEM_PERCENT = 50;   // can't redeem more than 50% of job cost
+const POINTS_PER_PAGE = 1;
+const POINTS_TO_RUPEES = 0.10;
+const MIN_REDEEM = 50;
+const MAX_REDEEM_PERCENT = 50;
+
+// ─── GET /api/loyalty/balance (student JWT) ───────────────────
+// Returns balance for the phone in the student token — no phone in URL
+router.get('/balance', studentAuth, async (req, res) => {
+  try {
+    const phone = req.student.phone;
+    const last10 = phone.slice(-10);
+
+    const { rows } = await db.query(
+      `SELECT
+         COALESCE(SUM(CASE WHEN type='earn'   THEN points ELSE 0 END), 0)::int AS total_earned,
+         COALESCE(SUM(CASE WHEN type='redeem' THEN points ELSE 0 END), 0)::int AS total_redeemed
+       FROM loyalty_transactions WHERE phone_number LIKE $1`,
+      ['%' + last10]
+    );
+
+    const balance = parseInt(rows[0].total_earned) - parseInt(rows[0].total_redeemed);
+
+    return res.json({
+      phone,
+      balance,
+      rupee_value: parseFloat((balance * POINTS_TO_RUPEES).toFixed(2)),
+      min_redeem: MIN_REDEEM,
+      can_redeem: balance >= MIN_REDEEM,
+    });
+  } catch (err) {
+    console.error('Loyalty balance error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // ─── GET /api/loyalty/admin/summary (admin) ──────────────────
 // MUST be registered BEFORE /:phone or Express will swallow it

@@ -54,4 +54,82 @@ async function me(req, res) {
   res.json({ user: req.user });
 }
 
-module.exports = { login, register, me };
+// ── OTP helpers ──────────────────────────────────────────────
+const crypto = require("crypto");
+const { sendWhatsApp } = require("../utils/whatsapp");
+
+function normalisePhone(raw) {
+  const digits = raw.replace(/\D/g, "");
+  return digits.startsWith("91") && digits.length === 12
+    ? "+" + digits
+    : "+91" + digits.slice(-10);
+}
+
+// POST /api/auth/otp/send
+async function sendOtp(req, res) {
+  const phone = normalisePhone(req.body.phone);
+  const otp   = String(Math.floor(100000 + Math.random() * 900000));
+
+  try {
+    const otp_hash  = await bcrypt.hash(otp, 8);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    // Invalidate old OTPs for this phone
+    await db.query(`DELETE FROM otp_sessions WHERE phone = $1`, [phone]);
+
+    await db.query(
+      `INSERT INTO otp_sessions (phone, otp_hash, expires_at) VALUES ($1, $2, $3)`,
+      [phone, otp_hash, expiresAt]
+    );
+
+    // Deliver via WhatsApp (Twilio sandbox). Falls back gracefully if not configured.
+    await sendWhatsApp(
+      phone,
+      `🔐 *CampusCopy* — Your verification code is:\n\n*${otp}*\n\nValid for 10 minutes. Do not share this code.`
+    );
+
+    // In dev mode, return OTP in response for testing
+    const resp = { message: "OTP sent via WhatsApp", phone };
+    if (process.env.NODE_ENV !== "production") resp._dev_otp = otp;
+    res.json(resp);
+  } catch (err) {
+    console.error("sendOtp error:", err);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+}
+
+// POST /api/auth/otp/verify
+async function verifyOtp(req, res) {
+  const phone = normalisePhone(req.body.phone);
+  const { otp } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      `SELECT * FROM otp_sessions
+       WHERE phone = $1 AND used = FALSE AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [phone]
+    );
+    const session = rows[0];
+    if (!session) return res.status(400).json({ error: "OTP expired or not found. Request a new one." });
+
+    const valid = await bcrypt.compare(otp, session.otp_hash);
+    if (!valid) return res.status(400).json({ error: "Incorrect OTP" });
+
+    // Mark used
+    await db.query(`UPDATE otp_sessions SET used = TRUE WHERE id = $1`, [session.id]);
+
+    const token = jwt.sign(
+      { phone, role: "student" },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.json({ token, phone });
+  } catch (err) {
+    console.error("verifyOtp error:", err);
+    res.status(500).json({ error: "Verification failed" });
+  }
+}
+
+module.exports = { login, register, me, sendOtp, verifyOtp };
