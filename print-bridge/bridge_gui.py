@@ -449,6 +449,35 @@ class PrintBridgeApp(tk.Tk):
                 tags=(status,))
             self.tree.tag_configure(status, foreground=self.STATUS_COLORS.get(status, TEXT))
 
+    # ── Page range extraction ─────────────────────────────────
+
+    def _extract_page_range(self, src_path, page_from, page_to):
+        """
+        Use pikepdf to extract pages page_from..page_to (1-indexed, inclusive)
+        into a new temp PDF. Returns the new path, or src_path on failure.
+        """
+        try:
+            import pikepdf
+            with pikepdf.open(src_path) as pdf:
+                total = len(pdf.pages)
+                pf = max(1, int(page_from))
+                pt = min(total, int(page_to))
+                if pf == 1 and pt == total:
+                    return src_path   # nothing to extract
+                self.after(0, self.log, f"  Extracting pages {pf}–{pt} of {total}", "dim")
+                new_pdf = pikepdf.Pdf.new()
+                for i in range(pf - 1, pt):
+                    new_pdf.pages.append(pdf.pages[i])
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                tmp.close()
+                new_pdf.save(tmp.name)
+                return tmp.name
+        except ImportError:
+            self.after(0, self.log, "  pikepdf not installed — printing full document", "warn")
+        except Exception as e:
+            self.after(0, self.log, f"  Page extraction failed ({e}) — printing full document", "warn")
+        return src_path
+
     # ── Process job ───────────────────────────────────────────
 
     def _process_job(self, job):
@@ -499,45 +528,66 @@ class PrintBridgeApp(tk.Tk):
 
     def _print_pdf(self, file_path, job):
         try:
-            copies = int(job.get("copies", 1))
-            color  = job.get("color", False)
-            duplex = job.get("double_sided", False)
+            copies = max(1, int(job.get("copies", 1)))
+            color  = bool(job.get("color", False))
+            duplex = bool(job.get("double_sided", False))
+            pf     = job.get("page_from")
+            pt     = job.get("page_to")
+
+            # Extract page range into a separate temp PDF if needed
+            print_path = file_path
+            range_tmp  = None
+            if pf and pt:
+                print_path = self._extract_page_range(file_path, pf, pt)
+                if print_path != file_path:
+                    range_tmp = print_path
+
             if platform.system() == "Windows":
                 sumatra = r"C:\Program Files\SumatraPDF\SumatraPDF.exe"
-                settings = f"{copies}x"
-                if duplex: settings += ",duplexlong"
-                if color:  settings += ",color"
+                settings_parts = [f"{copies}x"]
+                if duplex: settings_parts.append("duplexlong")
+                if not color: settings_parts.append("monochrome")
+                settings_str = ",".join(settings_parts)
+
                 if os.path.exists(sumatra):
-                    subprocess.run([sumatra, "-print-to-default",
-                                    "-print-settings", settings, file_path],
-                                   check=True, timeout=60)
+                    subprocess.run(
+                        [sumatra, "-print-to-default", "-print-settings", settings_str, print_path],
+                        check=True, timeout=120,
+                    )
                 else:
                     try:
                         import win32api
-                        # ShellExecute print verb ignores lpParameters for most handlers;
-                        # prints to default printer, 1 copy. SumatraPDF is strongly preferred.
                         for _ in range(copies):
-                            win32api.ShellExecute(0, "print", file_path, None, ".", 0)
-                            time.sleep(2)  # brief gap between submissions
+                            win32api.ShellExecute(0, "print", print_path, None, ".", 0)
+                            time.sleep(3)
                     except ImportError:
-                        # pywin32 not installed — fall back to ShellExecute via subprocess
                         for _ in range(copies):
                             subprocess.run(
-                                ["rundll32.exe", "mshtml.dll,PrintHTML", file_path],
-                                timeout=60
+                                ["rundll32.exe", "mshtml.dll,PrintHTML", print_path],
+                                timeout=120,
                             )
-                            time.sleep(2)
+                            time.sleep(3)
             else:
-                # macOS / Linux
+                # macOS / Linux — full CUPS lp flags
                 cmd = ["lp", "-n", str(copies)]
-                if duplex: cmd += ["-o", "sides=two-sided-long-edge"]
-                if color:  cmd += ["-o", "ColorModel=RGB"]
-                cmd.append(file_path)
-                result = subprocess.run(cmd, timeout=60)
+                if PRINTER_NAME:
+                    cmd += ["-d", PRINTER_NAME]
+                cmd += ["-o", "sides=two-sided-long-edge" if duplex else "sides=one-sided"]
+                cmd += ["-o", "ColorModel=RGB" if color else "ColorModel=Gray"]
+                cmd += ["-o", "fit-to-page"]
+                cmd.append(print_path)
+                result = subprocess.run(cmd, timeout=120, capture_output=True, text=True)
                 if result.returncode != 0:
-                    raise RuntimeError(f"lp exited with code {result.returncode}")
+                    raise RuntimeError(f"lp failed: {result.stderr.strip()}")
+
+            # Clean up range-extracted temp
+            if range_tmp:
+                try: os.unlink(range_tmp)
+                except Exception: pass
+
             self.after(0, self.log,
-                f"Sent to printer ({copies} cop{'y' if copies==1 else 'ies'})", "ok")
+                f"Sent to printer ({copies} cop{'y' if copies==1 else 'ies'}, "
+                f"{'Color' if color else 'B&W'}, {'Duplex' if duplex else 'Simplex'})", "ok")
             return True
         except Exception as e:
             self.after(0, self.log, f"Print error: {e}", "err")
