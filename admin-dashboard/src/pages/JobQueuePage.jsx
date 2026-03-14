@@ -110,7 +110,7 @@ export default function JobQueuePage() {
     queryFn: () => {
       const params = new URLSearchParams();
       if (filter === 'done') params.set('status', 'done');
-      params.set('_t', Date.now());
+      params.set('_t', Date.now()); // prevents 304 cache
       return api.get(`/api/admin/jobs?${params}`).then(r => r.data);
     },
     refetchInterval: 3000,
@@ -134,14 +134,14 @@ export default function JobQueuePage() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['admin-jobs'] }),
   });
 
-  // ── Socket for real-time queue updates ───────────────────────
+  // ── Socket — polling only (Render free tier drops WebSockets) ─
   useEffect(() => {
-   const s = io(SOCKET_URL, { 
-  transports: ['polling'],
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 1000,
-});
+    const s = io(SOCKET_URL, {
+      transports: ['polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2000,
+    });
     socketRef.current = s;
 
     s.on('job_update', () => {
