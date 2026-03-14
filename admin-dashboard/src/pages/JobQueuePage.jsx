@@ -136,7 +136,12 @@ export default function JobQueuePage() {
 
   // ── Socket for real-time queue updates ───────────────────────
   useEffect(() => {
-    const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+   const s = io(SOCKET_URL, { 
+  transports: ['polling'],
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+});
     socketRef.current = s;
 
     s.on('job_update', () => {
