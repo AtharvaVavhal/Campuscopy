@@ -68,6 +68,7 @@ app.use("/api/loyalty",  require("./routes/loyalty"));
 app.use("/api/push",     require("./routes/push"));
 app.use("/api/colleges", require("./routes/colleges"));
 app.use("/api/admin",    require("./routes/admin"));
+
 app.get("/debug/routes", (req, res) => {
   const auth = require("./routes/auth_routes");
   const ctrl = require("./controllers/authController");
@@ -79,14 +80,9 @@ app.get("/debug/routes", (req, res) => {
 });
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
-app.use((req, res) => res.status(404).json({ error: "Route not found" }));
-app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({ error: "Internal server error" });
-});
 
-app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));
+
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal server error" });
