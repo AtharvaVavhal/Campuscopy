@@ -13,8 +13,8 @@ async function createPaymentOrder(req, res) {
     const { rows } = await db.query(
       `SELECT j.*, c.razorpay_key_id, c.razorpay_key_secret
        FROM jobs j
-       LEFT JOIN colleges c ON c.id = j.college_id
-       WHERE j.id = $1`,
+       LEFT JOIN colleges c ON c.id::text = j.college_id::text
+       WHERE j.id = $1::uuid`,
       [job_id]
     );
     const job = rows[0];
@@ -27,13 +27,13 @@ async function createPaymentOrder(req, res) {
 
     let finalAmount = parseFloat(job.cost);
 
-    // Apply coupon — ✅ FIX BUG07: use Coupon.validate() which checks is_active + expires_at
+    // Apply coupon
     if (coupon_code) {
       const result = await Coupon.validate(coupon_code, finalAmount);
       if (result.valid) {
         finalAmount = result.final_amount;
         await db.query(
-          `UPDATE jobs SET coupon_id = $1, discount_amount = $2 WHERE id = $3`,
+          `UPDATE jobs SET coupon_id = $1, discount_amount = $2 WHERE id = $3::uuid`,
           [result.id, result.discount_amount, job_id]
         );
       }
@@ -48,7 +48,7 @@ async function createPaymentOrder(req, res) {
       );
       finalAmount = Math.max(parseFloat((finalAmount - loyaltyDiscount).toFixed(2)), 1);
       await db.query(
-        `UPDATE jobs SET loyalty_points_used = $1 WHERE id = $2`,
+        `UPDATE jobs SET loyalty_points_used = $1 WHERE id = $2::uuid`,
         [pts, job_id]
       );
     }
@@ -56,7 +56,7 @@ async function createPaymentOrder(req, res) {
     // Save phone if provided and not already set
     if (phone) {
       await db.query(
-        `UPDATE jobs SET phone_number = $1 WHERE id = $2 AND phone_number IS NULL`,
+        `UPDATE jobs SET phone_number = $1 WHERE id = $2::uuid AND phone_number IS NULL`,
         [phone, job_id]
       );
     }
@@ -65,15 +65,15 @@ async function createPaymentOrder(req, res) {
     const order = await createOrder({ amount: finalAmount, receipt: job_id }, rzpKeyId, rzpKeySecret);
 
     await db.query(
-      `UPDATE jobs SET razorpay_order_id = $1 WHERE id = $2`,
+      `UPDATE jobs SET razorpay_order_id = $1 WHERE id = $2::uuid`,
       [order.id, job_id]
     );
 
     res.json({
       order_id:     order.id,
-      amount:       order.amount,   // paise
+      amount:       order.amount,
       currency:     order.currency,
-      key_id:       rzpKeyId,       // return college-specific key to PWA
+      key_id:       rzpKeyId,
       final_amount: finalAmount,
     });
   } catch (err) {
@@ -85,7 +85,7 @@ async function createPaymentOrder(req, res) {
 // ─── POST /api/payments/webhook ──────────────────────────────
 async function webhook(req, res) {
   const signature = req.headers["x-razorpay-signature"];
-  const rawBody   = req.body; // Buffer — express.raw() in server.js
+  const rawBody   = req.body;
 
   if (!verifyWebhookSignature(rawBody, signature)) {
     console.warn("Webhook: invalid signature");
@@ -114,43 +114,37 @@ async function webhook(req, res) {
         return res.json({ ok: true });
       }
 
-      // Mark paid
       await db.query(
-        `UPDATE jobs SET status = 'paid', updated_at = NOW() WHERE id = $1`,
+        `UPDATE jobs SET status = 'paid', updated_at = NOW() WHERE id = $1::uuid`,
         [job.id]
       );
 
-      // Socket broadcast
       const io = req.app.get("io");
       if (io) {
         io.to(`job:${job.id}`).emit("job_update", { id: job.id, status: "paid" });
         io.emit("queue_update", { jobId: job.id, status: "paid" });
       }
 
-      // Record coupon use
       if (job.coupon_id) {
         await Coupon.recordUse(job.coupon_id, job.id, job.discount_amount || 0);
       }
 
-      // Loyalty: deduct redeemed points
       if (job.loyalty_points_used > 0 && job.phone_number) {
         await db.query(
           `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
-           VALUES ($1, $2, $3, 'redeem', $4, $5)`,
+           VALUES ($1, $2, $3::uuid, 'redeem', $4, $5)`,
           [job.phone_number, job.college_id || 'college1', job.id,
            job.loyalty_points_used,
            `Redeemed ${job.loyalty_points_used} pts for ₹${(job.loyalty_points_used * 0.10).toFixed(0)} off`]
         );
       }
 
-      // Loyalty: earn 1 pt per ₹1 of the FINAL amount paid (after discounts)
-      // ✅ FIX BUG08: use finalAmount from job record, not gross cost
       if (job.phone_number) {
         const amountPaid = parseFloat(job.cost) - parseFloat(job.discount_amount || 0);
         const ptsEarned = Math.floor(Math.max(amountPaid, 0));
         await db.query(
           `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
-           VALUES ($1, $2, $3, 'earn', $4, $5)`,
+           VALUES ($1, $2, $3::uuid, 'earn', $4, $5)`,
           [job.phone_number, job.college_id || 'college1', job.id,
            ptsEarned,
            `Earned ${ptsEarned} pts for printing ${job.file_name}`]
