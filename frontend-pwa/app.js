@@ -275,7 +275,12 @@ async function pollStatus() {
 
 function connectSocket() {
   if (socket) socket.disconnect();
-  socket = io(API);
+  socket = io(API, {
+  transports: ['polling'],
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 2000,
+});
   socket.emit('join_job', currentJob.id);
   socket.on('job_update', (data) => {
     updateStatusUI(data.status);
