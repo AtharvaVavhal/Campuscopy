@@ -79,11 +79,11 @@ app.get("/debug/routes", (req, res) => {
 });
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
-```
-
-Then **commit + push** to trigger a Render redeploy. Once it's live, open this URL in your browser:
-```
-https://campuscopy-api.onrender.com/debug/routes
+app.use((req, res) => res.status(404).json({ error: "Route not found" }));
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));
