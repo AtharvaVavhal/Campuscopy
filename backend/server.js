@@ -68,6 +68,22 @@ app.use("/api/loyalty",  require("./routes/loyalty"));
 app.use("/api/push",     require("./routes/push"));
 app.use("/api/colleges", require("./routes/colleges"));
 app.use("/api/admin",    require("./routes/admin"));
+app.get("/debug/routes", (req, res) => {
+  const auth = require("./routes/auth_routes");
+  const ctrl = require("./controllers/authController");
+  res.json({
+    auth_routes_loaded: true,
+    controller_exports: Object.keys(ctrl),
+    routes: auth.stack.map(r => r.route?.path).filter(Boolean)
+  });
+});
+
+app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
+```
+
+Then **commit + push** to trigger a Render redeploy. Once it's live, open this URL in your browser:
+```
+https://campuscopy-api.onrender.com/debug/routes
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 app.use((req, res) => res.status(404).json({ error: "Route not found" }));
