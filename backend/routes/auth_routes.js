@@ -36,7 +36,7 @@ router.get("/me", auth, me);
 // POST /api/auth/otp/send   { phone: "9876543210" }
 router.post(
   "/otp/send",
-  [body("phone").isMobilePhone("any").withMessage("Valid phone number required")],
+  [body("phone").notEmpty().withMessage("Valid phone number required")],
   validate,
   sendOtp
 );
