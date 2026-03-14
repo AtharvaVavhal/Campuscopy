@@ -6,10 +6,11 @@ const path    = require("path");
 const fs      = require("fs");
 const QRCode  = require("qrcode");
 const { v4: uuidv4 } = require("uuid");
+const jwt     = require("jsonwebtoken");
 const db      = require("../config/db");
 const authMiddleware  = require("../middleware/auth");
 const studentAuth     = require("../middleware/studentAuth");
-const upload  = require("../middleware/upload");   // BUG09: use shared multer config
+const upload  = require("../middleware/upload");
 const { notifyJobStatus } = require("../utils/whatsapp");
 const { sendPush, buildPayload } = require("../utils/push");
 
@@ -99,7 +100,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const job = result.rows[0];
 
-    // ✅ Notify admin dashboard of new job instantly
     const io = req.app.get("io");
     if (io) {
       io.emit("queue_update", { jobId: job.id, status: "pending" });
@@ -117,7 +117,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 router.get("/", authMiddleware, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
-    // ✅ FIX BUG11: Filter jobs by the authenticated admin's college_id
     const college_id = req.user?.college_id;
     const result = await db.query(
       `SELECT j.*, p.name AS printer_name
@@ -135,57 +134,49 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // ─── GET /api/jobs/by-phone/:phone ───────────────────────────
-// Accepts admin JWT (authMiddleware) or student JWT (studentAuth)
+// Accepts both admin JWT and student JWT.
 // Students can only query their own phone number.
-router.get("/by-phone/:phone", async (req, res, next) => {
-  // Try student auth first, then admin auth
-  studentAuth(req, res, async (studentErr) => {
-    if (!studentErr && req.student) {
-      // Student authenticated — enforce phone match
-      const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
-      const studentLast10 = req.student.phone.replace(/^\+?91/, "").slice(-10);
-      const queryLast10   = phone.replace(/^\+?91/, "").slice(-10);
-      if (studentLast10 !== queryLast10) {
-        return res.status(403).json({ error: "You can only view your own orders" });
-      }
-      try {
-        const result = await db.query(
-          `SELECT j.*, p.name AS printer_name, p.location AS printer_location
-           FROM jobs j
-           LEFT JOIN printers p ON p.id = j.printer_id
-           WHERE j.phone_number LIKE $1
-           ORDER BY j.created_at DESC LIMIT 50`,
-          ["%" + studentLast10]
-        );
-        return res.json({ jobs: result.rows });
-      } catch (err) {
-        return res.status(500).json({ error: "Failed to fetch history" });
-      }
+router.get("/by-phone/:phone", async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader) return res.status(401).json({ error: "Authentication required" });
+
+  const token = authHeader.split(" ")[1];
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
+  const last10 = phone.replace(/^\+?91/, "").slice(-10);
+
+  // Students can only see their own orders
+  if (decoded.role === "student") {
+    const studentLast10 = decoded.phone.replace(/^\+?91/, "").slice(-10);
+    if (studentLast10 !== last10) {
+      return res.status(403).json({ error: "You can only view your own orders" });
     }
-    // Fall back to admin JWT
-    authMiddleware(req, res, async (adminErr) => {
-      if (adminErr) return res.status(401).json({ error: "Authentication required" });
-      try {
-        const phone = decodeURIComponent(req.params.phone).replace(/\s/g, "");
-        const result = await db.query(
-          `SELECT j.*, p.name AS printer_name, p.location AS printer_location
-           FROM jobs j
-           LEFT JOIN printers p ON p.id = j.printer_id
-           WHERE j.phone_number LIKE $1
-           ORDER BY j.created_at DESC LIMIT 50`,
-          ["%" + phone.replace(/^\+?91/, "")]
-        );
-        return res.json({ jobs: result.rows });
-      } catch (err) {
-        return res.status(500).json({ error: "Failed to fetch history" });
-      }
-    });
-  });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT j.*, p.name AS printer_name, p.location AS printer_location
+       FROM jobs j
+       LEFT JOIN printers p ON p.id = j.printer_id
+       WHERE j.phone_number LIKE $1
+       ORDER BY j.created_at DESC LIMIT 50`,
+      ["%" + last10]
+    );
+    res.json({ jobs: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
 });
 
 // ─── GET /api/jobs/printer/:printer_id (print bridge) ────────
 router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
-  // ✅ FIX BUG17: Ensure the authenticated printer can only fetch its own queue
   if (req._printerId !== req.params.printer_id) {
     return res.status(403).json({ error: "Printer ID mismatch" });
   }
@@ -203,7 +194,6 @@ router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
 });
 
 // ─── GET /api/jobs/qr/:token (counter verification) ──────────
-// ✅ FIX BUG03: Requires JWT — counter staff must be authenticated
 router.get("/qr/:token", authMiddleware, async (req, res) => {
   try {
     const result = await db.query(
@@ -266,7 +256,6 @@ router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
 
     const job = result.rows[0];
 
-    // Socket — instant update to student browser and admin dashboard
     const io = req.app.get("io");
     if (io) {
       io.to(`job:${job.id}`).emit("job_update", {
@@ -279,10 +268,8 @@ router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
       }
     }
 
-    // WhatsApp notification (async — never blocks response)
     if (job.phone_number) notifyJobStatus(job, status);
 
-    // Push notification
     const pushPayload = buildPayload(job, status);
     if (pushPayload) {
       db.query('SELECT * FROM push_subscriptions WHERE job_id = $1', [job.id])
