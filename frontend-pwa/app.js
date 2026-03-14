@@ -276,21 +276,6 @@ async function pollStatus() {
 function connectSocket() {
   if (socket) socket.disconnect();
   socket = io(API, {
-  transports: ['polling'],
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 2000,
-});
-  socket.emit('join_job', currentJob.id);
-  socket.on('job_update', (data) => {
-    updateStatusUI(data.status);
-    if (data.status === 'done') showToast('Your print is ready for pickup!');
-  });
-}
-
-function connectSocket() {
-  if (socket) socket.disconnect();
-  socket = io(API, {
     transports: ['polling'],
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -301,7 +286,6 @@ function connectSocket() {
     updateStatusUI(data.status);
     if (data.status === 'done') showToast('Your print is ready for pickup!');
   });
-
   // Fallback polling every 5 seconds
   setInterval(pollStatus, 5000);
 }
