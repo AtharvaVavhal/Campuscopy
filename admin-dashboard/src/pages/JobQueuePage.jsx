@@ -106,14 +106,16 @@ export default function JobQueuePage() {
 
   // ── Fetch from /api/admin/jobs (auth'd, college-scoped) ──────
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-jobs', filter],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (filter === 'done') params.set('status', 'done');
-      return api.get(`/api/admin/jobs?${params}`).then(r => r.data);
-    },
-    refetchInterval: 10000,
-  });
+  queryKey: ['admin-jobs', filter],
+  queryFn: () => {
+    const params = new URLSearchParams();
+    if (filter === 'done') params.set('status', 'done');
+    params.set('_t', Date.now()); // prevents 304 cache
+    return api.get(`/api/admin/jobs?${params}`).then(r => r.data);
+  },
+  refetchInterval: 3000,
+  staleTime: 0,
+});
 
   // ── Status update hits /api/admin/jobs/:id/status ────────────
   const { mutate: updateStatus, isPending } = useMutation({
