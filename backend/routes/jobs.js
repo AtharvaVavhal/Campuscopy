@@ -270,7 +270,7 @@ router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
 
     if (job.phone_number) notifyJobStatus(job, status);
 
-    const pushPayload = buildPayload(job, status);
+    const pushPayload = typeof buildPayload === 'function' ? buildPayload(job, status) : null;
     if (pushPayload) {
       db.query('SELECT * FROM push_subscriptions WHERE job_id = $1', [job.id])
         .then(async ({ rows: subs }) => {
