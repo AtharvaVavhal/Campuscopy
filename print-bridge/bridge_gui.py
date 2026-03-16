@@ -17,8 +17,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 # ── MAC address detection ──────────────────────────────────────
 def get_mac_address():
     mac = uuid.getnode()
-    # uuid.getnode() sets the multicast bit if it generated a random address
-    if mac >> 40 & 1:  # multicast bit set → random/fake MAC
+    if mac >> 40 & 1:
         return "unknown-" + "%012x" % mac
     return ':'.join(('%012x' % mac)[i:i+2] for i in range(0, 12, 2))
 
@@ -52,22 +51,19 @@ class PrintBridgeApp(tk.Tk):
         self.minsize(900, 620)
         self.configure(bg=BG)
 
-        # Mutable config (may be updated after auto-register)
-        self.printer_id   = PRINTER_ID
-        self.api_key      = API_KEY
-        self.printer_name = PRINTER_NAME
-
-        self.running      = False
-        self.connected    = False
-        self.jobs         = []
-        self._sched_thread = None
-        self._in_progress  = set()   # job IDs currently being processed
+        self.printer_id        = PRINTER_ID
+        self.api_key           = API_KEY
+        self.printer_name      = PRINTER_NAME
+        self.running           = False
+        self.connected         = False
+        self.jobs              = []
+        self._sched_thread     = None
+        self._in_progress      = set()
         self._in_progress_lock = threading.Lock()
 
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        # Auto-register if no PRINTER_ID yet
         if not self.printer_id:
             self.after(500, self._auto_register)
         else:
@@ -84,11 +80,7 @@ class PrintBridgeApp(tk.Tk):
             try:
                 r = requests.post(
                     f"{API_URL}/api/printers/register",
-                    json={
-                        "mac_address": MAC_ADDRESS,
-                        "name":        self.printer_name,
-                        "location":    "Unknown",
-                    },
+                    json={"mac_address": MAC_ADDRESS, "name": self.printer_name, "location": "Unknown"},
                     timeout=10
                 )
                 if r.status_code in (200, 201):
@@ -96,15 +88,10 @@ class PrintBridgeApp(tk.Tk):
                     new_id  = data["printer_id"]
                     new_key = data["api_key"]
                     fresh   = data.get("registered", True)
-
-                    # Save to .env so next launch skips registration
                     set_key(ENV_PATH, "PRINTER_ID", new_id)
                     set_key(ENV_PATH, "API_KEY",    new_key)
-
-                    # Update runtime config
                     self.printer_id = new_id
                     self.api_key    = new_key
-
                     label = "Registered new printer" if fresh else "Found existing printer"
                     self.after(0, self.log, f"✅ {label}: {data['name']}", "ok")
                     self.after(0, self.log, f"   PRINTER_ID: {new_id}", "dim")
@@ -119,26 +106,20 @@ class PrintBridgeApp(tk.Tk):
     # ── UI construction ───────────────────────────────────────
 
     def _build_ui(self):
-        # ── Top bar ──
         top = tk.Frame(self, bg=BG, pady=14, padx=20)
         top.pack(fill="x")
 
-        tk.Label(top, text="CampusCopy", font=("Helvetica", 20, "bold"),
-                 bg=BG, fg=VIOLET).pack(side="left")
-        tk.Label(top, text="  Print Bridge", font=("Helvetica", 13),
-                 bg=BG, fg=MUTED).pack(side="left", pady=4)
+        tk.Label(top, text="CampusCopy", font=("Helvetica", 20, "bold"), bg=BG, fg=VIOLET).pack(side="left")
+        tk.Label(top, text="  Print Bridge", font=("Helvetica", 13), bg=BG, fg=MUTED).pack(side="left", pady=4)
 
         self.status_frame = tk.Frame(top, bg=BG)
         self.status_frame.pack(side="right")
-        self.status_dot = tk.Label(self.status_frame, text="●", font=("Helvetica", 10),
-                                   bg=BG, fg=RED)
+        self.status_dot = tk.Label(self.status_frame, text="●", font=("Helvetica", 10), bg=BG, fg=RED)
         self.status_dot.pack(side="left")
-        self.status_lbl = tk.Label(self.status_frame, text="Offline",
-                                   font=("Helvetica", 11, "bold"), bg=BG, fg=MUTED)
+        self.status_lbl = tk.Label(self.status_frame, text="Offline", font=("Helvetica", 11, "bold"), bg=BG, fg=MUTED)
         self.status_lbl.pack(side="left", padx=(4, 20))
 
-        self.start_btn = self._btn(top, "▶  Start Bridge", self._toggle_bridge,
-                                   EMERALD, big=True)
+        self.start_btn = self._btn(top, "▶  Start Bridge", self._toggle_bridge, EMERALD, big=True)
         self.start_btn.pack(side="right", padx=(0, 12))
 
         tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
@@ -149,7 +130,6 @@ class PrintBridgeApp(tk.Tk):
         body.columnconfigure(1, weight=1)
         body.rowconfigure(1, weight=1)
 
-        # ── Stat cards ──
         stats = tk.Frame(body, bg=BG)
         stats.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 14))
         for i in range(4): stats.columnconfigure(i, weight=1)
@@ -162,32 +142,25 @@ class PrintBridgeApp(tk.Tk):
             ("api_ping",     "API Status", "—", GOLD),
         ]
         for col, (key, label, val, color) in enumerate(stat_defs):
-            card = tk.Frame(stats, bg=CARD, relief="flat", bd=0,
-                            highlightbackground=BORDER, highlightthickness=1)
+            card = tk.Frame(stats, bg=CARD, relief="flat", bd=0, highlightbackground=BORDER, highlightthickness=1)
             card.grid(row=0, column=col, sticky="ew", padx=(0 if col==0 else 6, 0))
             tk.Label(card, text=label, font=("Helvetica", 9), bg=CARD, fg=MUTED, pady=10).pack()
             var = tk.StringVar(value=val)
             self.stat_vars[key] = var
-            tk.Label(card, textvariable=var, font=("Helvetica", 22, "bold"),
-                     bg=CARD, fg=color, pady=4).pack()
+            tk.Label(card, textvariable=var, font=("Helvetica", 22, "bold"), bg=CARD, fg=color, pady=4).pack()
             tk.Label(card, text="", bg=CARD, pady=6).pack()
 
-        # ── Job queue (left) ──
         left = tk.Frame(body, bg=BG)
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
         left.rowconfigure(1, weight=1)
         left.columnconfigure(0, weight=1)
 
-        tk.Label(left, text="Job Queue", font=("Helvetica", 12, "bold"),
-                 bg=BG, fg=TEXT).grid(row=0, column=0, sticky="w", pady=(0, 8))
+        tk.Label(left, text="Job Queue", font=("Helvetica", 12, "bold"), bg=BG, fg=TEXT).grid(row=0, column=0, sticky="w", pady=(0, 8))
 
         style = ttk.Style(self)
         style.theme_use("clam")
-        style.configure("Treeview",
-            background=CARD, foreground=TEXT, fieldbackground=CARD,
-            rowheight=36, bordercolor=BORDER, relief="flat", font=("Helvetica", 11))
-        style.configure("Treeview.Heading",
-            background=BG2, foreground=MUTED, relief="flat", font=("Helvetica", 9, "bold"))
+        style.configure("Treeview", background=CARD, foreground=TEXT, fieldbackground=CARD, rowheight=36, bordercolor=BORDER, relief="flat", font=("Helvetica", 11))
+        style.configure("Treeview.Heading", background=BG2, foreground=MUTED, relief="flat", font=("Helvetica", 9, "bold"))
         style.map("Treeview", background=[("selected", BORDER)])
 
         cols = ("file", "pages", "cost", "status")
@@ -217,7 +190,6 @@ class PrintBridgeApp(tk.Tk):
         self._btn(ctrl, "✓ Mark Done", self._manual_done,    EMERALD).grid(row=0, column=2, sticky="ew", padx=4)
         self._btn(ctrl, "✗ Mark Fail", self._manual_fail,    RED).grid(row=0, column=3, sticky="ew", padx=(4,0))
 
-        # ── Log (right) ──
         right = tk.Frame(body, bg=BG)
         right.grid(row=1, column=1, sticky="nsew")
         right.rowconfigure(1, weight=1)
@@ -225,15 +197,10 @@ class PrintBridgeApp(tk.Tk):
 
         log_head = tk.Frame(right, bg=BG)
         log_head.grid(row=0, column=0, sticky="ew", pady=(0, 8))
-        tk.Label(log_head, text="Activity Log", font=("Helvetica", 12, "bold"),
-                 bg=BG, fg=TEXT).pack(side="left")
+        tk.Label(log_head, text="Activity Log", font=("Helvetica", 12, "bold"), bg=BG, fg=TEXT).pack(side="left")
         self._btn(log_head, "Clear", self._clear_log, MUTED, small=True).pack(side="right")
 
-        self.log_box = scrolledtext.ScrolledText(
-            right, bg=CARD, fg=TEXT, font=("Courier", 10),
-            relief="flat", bd=0, insertbackground=TEXT,
-            state="disabled", wrap="word",
-            highlightbackground=BORDER, highlightthickness=1)
+        self.log_box = scrolledtext.ScrolledText(right, bg=CARD, fg=TEXT, font=("Courier", 10), relief="flat", bd=0, insertbackground=TEXT, state="disabled", wrap="word", highlightbackground=BORDER, highlightthickness=1)
         self.log_box.grid(row=1, column=0, sticky="nsew")
 
         self.log_box.tag_config("ok",   foreground=EMERALD)
@@ -242,28 +209,19 @@ class PrintBridgeApp(tk.Tk):
         self.log_box.tag_config("warn", foreground=GOLD)
         self.log_box.tag_config("dim",  foreground=MUTED)
 
-        # ── Bottom bar ──
         tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
         bot = tk.Frame(self, bg=BG2, pady=14, padx=20)
         bot.pack(fill="x")
 
-        self.printer_lbl = tk.Label(bot, text=f"Printer: {self.printer_name}",
-                                    font=("Helvetica", 11), bg=BG2, fg=MUTED)
+        self.printer_lbl = tk.Label(bot, text=f"Printer: {self.printer_name}", font=("Helvetica", 11), bg=BG2, fg=MUTED)
         self.printer_lbl.pack(side="left", padx=20)
-        tk.Label(bot, text=f"MAC: {MAC_ADDRESS}",
-                 font=("Helvetica", 10), bg=BG2, fg=MUTED).pack(side="left")
-        tk.Label(bot, text=f"API: {API_URL}",
-                 font=("Helvetica", 10), bg=BG2, fg=MUTED).pack(side="right")
+        tk.Label(bot, text=f"MAC: {MAC_ADDRESS}", font=("Helvetica", 10), bg=BG2, fg=MUTED).pack(side="left")
+        tk.Label(bot, text=f"API: {API_URL}", font=("Helvetica", 10), bg=BG2, fg=MUTED).pack(side="right")
 
     def _btn(self, parent, text, cmd, color, small=False, big=False):
         size = 9 if small else (13 if big else 11)
         pad  = (4, 4) if small else (10, 8) if big else (8, 6)
-        b = tk.Button(parent, text=text, command=cmd,
-                      bg=BG2, fg=color,
-                      activebackground=BORDER, activeforeground=color,
-                      relief="flat", bd=0, cursor="hand2",
-                      font=("Helvetica", size, "bold"),
-                      padx=pad[0]*2, pady=pad[1])
+        b = tk.Button(parent, text=text, command=cmd, bg=BG2, fg=color, activebackground=BORDER, activeforeground=color, relief="flat", bd=0, cursor="hand2", font=("Helvetica", size, "bold"), padx=pad[0]*2, pady=pad[1])
         b.bind("<Enter>", lambda e: b.config(bg=BORDER))
         b.bind("<Leave>", lambda e: b.config(bg=BG2))
         return b
@@ -299,8 +257,7 @@ class PrintBridgeApp(tk.Tk):
     def _toggle_bridge(self):
         if not self.running:
             if not self.printer_id:
-                messagebox.showerror("Not registered",
-                    "Auto-registration failed or still in progress.\nCheck the log and try again.")
+                messagebox.showerror("Not registered", "Auto-registration failed or still in progress.\nCheck the log and try again.")
                 return
             self._start_bridge()
         else:
@@ -308,8 +265,7 @@ class PrintBridgeApp(tk.Tk):
 
     def _start_bridge(self):
         self.running = True
-        self.start_btn.config(text="■  Stop Bridge", bg=BG2, fg=RED,
-                              activebackground=BORDER, activeforeground=RED)
+        self.start_btn.config(text="■  Stop Bridge", bg=BG2, fg=RED, activebackground=BORDER, activeforeground=RED)
         self.start_btn.bind("<Enter>", lambda e: self.start_btn.config(bg=BORDER))
         self.start_btn.bind("<Leave>", lambda e: self.start_btn.config(bg=BG2))
         self.log("Bridge started.", "ok")
@@ -329,8 +285,7 @@ class PrintBridgeApp(tk.Tk):
         schedule.clear()
         self._in_progress.clear()
         self._set_online(False)
-        self.start_btn.config(text="▶  Start Bridge", bg=BG2, fg=EMERALD,
-                              activebackground=BORDER, activeforeground=EMERALD)
+        self.start_btn.config(text="▶  Start Bridge", bg=BG2, fg=EMERALD, activebackground=BORDER, activeforeground=EMERALD)
         self.start_btn.bind("<Enter>", lambda e: self.start_btn.config(bg=BORDER))
         self.start_btn.bind("<Leave>", lambda e: self.start_btn.config(bg=BG2))
         self.log("Bridge stopped.", "warn")
@@ -346,9 +301,7 @@ class PrintBridgeApp(tk.Tk):
         def run():
             headers = {"x-api-key": self.api_key}
             try:
-                r = requests.post(
-                    f"{API_URL}/api/printers/{self.printer_id}/heartbeat",
-                    headers=headers, timeout=5)
+                r = requests.post(f"{API_URL}/api/printers/{self.printer_id}/heartbeat", headers=headers, timeout=5)
                 ok = r.status_code == 200
                 self.after(0, self._set_online, ok)
                 self.after(0, self.stat_vars["api_ping"].set, "OK" if ok else str(r.status_code))
@@ -366,14 +319,12 @@ class PrintBridgeApp(tk.Tk):
         def run():
             headers = {"x-api-key": self.api_key}
             try:
-                r = requests.get(
-                    f"{API_URL}/api/jobs/printer/{self.printer_id}",
-                    headers=headers, timeout=10)
+                r = requests.get(f"{API_URL}/api/jobs/printer/{self.printer_id}", headers=headers, timeout=10)
                 if r.status_code != 200:
                     self.after(0, self.log, f"Poll failed: {r.status_code}", "err")
                     return
 
-                jobs = r.json().get("jobs", [])
+                jobs   = r.json().get("jobs", [])
                 self.jobs = jobs
                 self.after(0, self._refresh_tree, jobs)
 
@@ -382,19 +333,15 @@ class PrintBridgeApp(tk.Tk):
 
                 self.after(0, self.stat_vars["queued_count"].set, str(len(active)))
 
-                # done/failed counts come from a separate stats endpoint since the
-                # printer-jobs API only returns active statuses
                 def fetch_stats():
                     try:
-                        sr = requests.get(
-                            f"{API_URL}/api/printers/{self.printer_id}/stats",
-                            headers=headers, timeout=5)
+                        sr = requests.get(f"{API_URL}/api/printers/{self.printer_id}/stats", headers=headers, timeout=5)
                         if sr.status_code == 200:
                             sd = sr.json()
                             self.after(0, self.stat_vars["done_today"].set,   str(sd.get("done_today",   0)))
                             self.after(0, self.stat_vars["failed_today"].set, str(sd.get("failed_today", 0)))
                     except Exception:
-                        pass  # stats are non-critical, fail silently
+                        pass
                 threading.Thread(target=fetch_stats, daemon=True).start()
 
                 new_paid = []
@@ -419,7 +366,7 @@ class PrintBridgeApp(tk.Tk):
     # ── Tree view ─────────────────────────────────────────────
 
     STATUS_COLORS = {
-        "pending":  MUTED, "paid": GOLD, "queued": VIOLET,
+        "pending": MUTED, "paid": GOLD, "queued": VIOLET,
         "printing": CORAL, "done": EMERALD, "failed": RED,
     }
     STATUS_ICONS = {
@@ -430,11 +377,7 @@ class PrintBridgeApp(tk.Tk):
     def _refresh_tree(self, jobs):
         for item in self.tree.get_children():
             self.tree.delete(item)
-
-        sorted_jobs = sorted(jobs, key=lambda j: (
-            not j.get("priority", False), j.get("created_at", "")
-        ))
-
+        sorted_jobs = sorted(jobs, key=lambda j: (not j.get("priority", False), j.get("created_at", "")))
         for j in sorted_jobs:
             fname = j["file_name"]
             if len(fname) > 28: fname = fname[:25] + "…"
@@ -443,19 +386,12 @@ class PrintBridgeApp(tk.Tk):
             icon   = self.STATUS_ICONS.get(status, "")
             pages  = f"{j['pages']}×{j['copies']}"
             cost   = f"₹{j['cost']}"
-            self.tree.insert("", "end",
-                iid=j["id"],
-                values=(fname, pages, cost, f"{icon} {status.upper()}"),
-                tags=(status,))
+            self.tree.insert("", "end", iid=j["id"], values=(fname, pages, cost, f"{icon} {status.upper()}"), tags=(status,))
             self.tree.tag_configure(status, foreground=self.STATUS_COLORS.get(status, TEXT))
 
     # ── Page range extraction ─────────────────────────────────
 
     def _extract_page_range(self, src_path, page_from, page_to):
-        """
-        Use pikepdf to extract pages page_from..page_to (1-indexed, inclusive)
-        into a new temp PDF. Returns the new path, or src_path on failure.
-        """
         try:
             import pikepdf
             with pikepdf.open(src_path) as pdf:
@@ -463,7 +399,7 @@ class PrintBridgeApp(tk.Tk):
                 pf = max(1, int(page_from))
                 pt = min(total, int(page_to))
                 if pf == 1 and pt == total:
-                    return src_path   # nothing to extract
+                    return src_path
                 self.after(0, self.log, f"  Extracting pages {pf}–{pt} of {total}", "dim")
                 new_pdf = pikepdf.Pdf.new()
                 for i in range(pf - 1, pt):
@@ -506,8 +442,7 @@ class PrintBridgeApp(tk.Tk):
             final = "done" if success else "failed"
             self._update_status(job_id, final)
             self._in_progress.discard(job_id)
-            self.after(0, self.log, f"{'✅ Done' if success else '❌ Failed'}: {fname}",
-                       "ok" if success else "err")
+            self.after(0, self.log, f"{'✅ Done' if success else '❌ Failed'}: {fname}", "ok" if success else "err")
             self.after(0, self._poll_queue)
 
         threading.Thread(target=run, daemon=True).start()
@@ -515,8 +450,7 @@ class PrintBridgeApp(tk.Tk):
     def _download_pdf(self, job_id):
         headers = {"x-api-key": self.api_key}
         try:
-            r = requests.get(f"{API_URL}/api/jobs/{job_id}/file",
-                             headers=headers, timeout=30)
+            r = requests.get(f"{API_URL}/api/jobs/{job_id}/file", headers=headers, timeout=30)
             if r.status_code == 200:
                 tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
                 tmp.write(r.content)
@@ -528,13 +462,17 @@ class PrintBridgeApp(tk.Tk):
 
     def _print_pdf(self, file_path, job):
         try:
+            # TEST MODE — skip actual printing
+            if os.getenv("TEST_MODE") == "true":
+                self.after(0, self.log, "  TEST MODE — skipping actual print", "warn")
+                return True
+
             copies = max(1, int(job.get("copies", 1)))
             color  = bool(job.get("color", False))
             duplex = bool(job.get("double_sided", False))
             pf     = job.get("page_from")
             pt     = job.get("page_to")
 
-            # Extract page range into a separate temp PDF if needed
             print_path = file_path
             range_tmp  = None
             if pf and pt:
@@ -548,12 +486,8 @@ class PrintBridgeApp(tk.Tk):
                 if duplex: settings_parts.append("duplexlong")
                 if not color: settings_parts.append("monochrome")
                 settings_str = ",".join(settings_parts)
-
                 if os.path.exists(sumatra):
-                    subprocess.run(
-                        [sumatra, "-print-to-default", "-print-settings", settings_str, print_path],
-                        check=True, timeout=120,
-                    )
+                    subprocess.run([sumatra, "-print-to-default", "-print-settings", settings_str, print_path], check=True, timeout=120)
                 else:
                     try:
                         import win32api
@@ -562,13 +496,9 @@ class PrintBridgeApp(tk.Tk):
                             time.sleep(3)
                     except ImportError:
                         for _ in range(copies):
-                            subprocess.run(
-                                ["rundll32.exe", "mshtml.dll,PrintHTML", print_path],
-                                timeout=120,
-                            )
+                            subprocess.run(["rundll32.exe", "mshtml.dll,PrintHTML", print_path], timeout=120)
                             time.sleep(3)
             else:
-                # macOS / Linux — full CUPS lp flags
                 cmd = ["lp", "-n", str(copies)]
                 if PRINTER_NAME:
                     cmd += ["-d", PRINTER_NAME]
@@ -580,14 +510,11 @@ class PrintBridgeApp(tk.Tk):
                 if result.returncode != 0:
                     raise RuntimeError(f"lp failed: {result.stderr.strip()}")
 
-            # Clean up range-extracted temp
             if range_tmp:
                 try: os.unlink(range_tmp)
                 except Exception: pass
 
-            self.after(0, self.log,
-                f"Sent to printer ({copies} cop{'y' if copies==1 else 'ies'}, "
-                f"{'Color' if color else 'B&W'}, {'Duplex' if duplex else 'Simplex'})", "ok")
+            self.after(0, self.log, f"Sent to printer ({copies} cop{'y' if copies==1 else 'ies'}, {'Color' if color else 'B&W'}, {'Duplex' if duplex else 'Simplex'})", "ok")
             return True
         except Exception as e:
             self.after(0, self.log, f"Print error: {e}", "err")
@@ -596,8 +523,7 @@ class PrintBridgeApp(tk.Tk):
     def _update_status(self, job_id, status):
         headers = {"x-api-key": self.api_key}
         try:
-            r = requests.patch(f"{API_URL}/api/jobs/{job_id}/status",
-                               json={"status": status}, headers=headers, timeout=5)
+            r = requests.patch(f"{API_URL}/api/jobs/{job_id}/status", json={"status": status}, headers=headers, timeout=5)
             if r.status_code == 200:
                 self.after(0, self.log, f"  → {status.upper()}", "dim")
             else:
