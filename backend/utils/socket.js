@@ -7,7 +7,7 @@ const emitToPrinter = (io, printerId, event, data) => {
 };
 
 const emitJobStatus = (io, job) => {
-  emitToJob(io, job.id, 'job_status', {
+  emitToJob(io, job.id, 'job_update', {
     jobId: job.id,
     status: job.status,
     updatedAt: job.updated_at,

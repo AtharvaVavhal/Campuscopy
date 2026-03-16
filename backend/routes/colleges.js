@@ -140,6 +140,9 @@ router.patch('/settings', auth, async (req, res) => {
 
 // ── GET /api/colleges/all (super admin only) ──────────────────
 router.get('/all', auth, async (req, res) => {
+  if (req.user?.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Super admin access required' });
+  }
   try {
     const { rows } = await db.query(
       `SELECT c.*,

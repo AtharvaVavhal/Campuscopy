@@ -1,4 +1,4 @@
-  const API = 'https://campuscopy-api.onrender.com';
+const API = 'https://campuscopy-api.onrender.com';
   let currentJob = null;
   let socket = null;
   let scannerStream = null;
@@ -98,6 +98,10 @@
     const copies = document.getElementById('copies').value;
     const color = document.getElementById('color').checked;
     const double_sided = document.getElementById('double-sided').checked;
+    const phone = (document.getElementById('phone') || {}).value || '';
+    const priority = document.getElementById('priority') ? document.getElementById('priority').checked : false;
+    const page_from = (document.getElementById('page-from') || {}).value || '';
+    const page_to = (document.getElementById('page-to') || {}).value || '';
 
     const btn = document.getElementById('upload-btn');
     btn.disabled = true;
@@ -111,6 +115,10 @@
       fd.append('copies', copies);
       fd.append('color', color);
       fd.append('double_sided', double_sided);
+      fd.append('phone', phone.trim());
+      fd.append('priority', priority);
+      if (page_from) fd.append('page_from', page_from);
+      if (page_to)   fd.append('page_to', page_to);
 
       const res = await fetch(API + '/api/jobs/upload', { method: 'POST', body: fd });
       const data = await res.json();

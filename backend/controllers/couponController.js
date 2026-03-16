@@ -53,7 +53,7 @@ const createCoupon = async (req, res) => {
 // GET /api/coupons — admin lists all coupons
 const listCoupons = async (req, res) => {
   try {
-    const college_id = req.admin?.college_id || 'college1';
+    const college_id = req.user?.college_id || 'college1';
     const coupons = await Coupon.listAll(college_id);
     return res.json({ coupons });
   } catch (err) {

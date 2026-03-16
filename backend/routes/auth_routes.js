@@ -1,6 +1,6 @@
 const express = require("express");
 const { body } = require("express-validator");
-const { login, register, me, sendOtp, verifyOtp } = require("../controllers/authController");
+const { login, register, me, sendOtp, verifyOtp, changePassword } = require("../controllers/authController");
 const auth = require("../middleware/auth");
 const validate = require("../middleware/validate");
 
@@ -31,6 +31,18 @@ router.post(
 );
 
 router.get("/me", auth, me);
+
+// POST /api/auth/change-password  { current_password, new_password }
+router.post(
+  "/change-password",
+  auth,
+  [
+    body("current_password").notEmpty().withMessage("Current password is required"),
+    body("new_password").isLength({ min: 8 }).withMessage("New password must be at least 8 characters"),
+  ],
+  validate,
+  changePassword
+);
 
 // ── Student OTP login ─────────────────────────────────────────
 // POST /api/auth/otp/send   { phone: "9876543210" }

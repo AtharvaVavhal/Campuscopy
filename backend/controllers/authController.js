@@ -132,4 +132,42 @@ async function verifyOtp(req, res) {
   }
 }
 
-module.exports = { login, register, me, sendOtp, verifyOtp };
+// POST /api/auth/change-password
+async function changePassword(req, res) {
+  const { current_password, new_password } = req.body;
+
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: "current_password and new_password are required" });
+  }
+  if (new_password.length < 8) {
+    return res.status(400).json({ error: "New password must be at least 8 characters" });
+  }
+  if (current_password === new_password) {
+    return res.status(400).json({ error: "New password must differ from current password" });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT * FROM admins WHERE id = $1 LIMIT 1`,
+      [req.user.id]
+    );
+    const admin = rows[0];
+    if (!admin) return res.status(404).json({ error: "Admin not found" });
+
+    const valid = await bcrypt.compare(current_password, admin.password_hash);
+    if (!valid) return res.status(401).json({ error: "Current password is incorrect" });
+
+    const new_hash = await bcrypt.hash(new_password, 10);
+    await db.query(
+      `UPDATE admins SET password_hash = $1 WHERE id = $2`,
+      [new_hash, admin.id]
+    );
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("changePassword error:", err);
+    res.status(500).json({ error: "Password change failed" });
+  }
+}
+
+module.exports = { login, register, me, sendOtp, verifyOtp, changePassword };

@@ -194,7 +194,7 @@ router.get("/printer/:printer_id", bridgeAuth, async (req, res) => {
 });
 
 // ─── GET /api/jobs/qr/:token (counter verification) ──────────
-router.get("/qr/:token", authMiddleware, async (req, res) => {
+router.get("/qr/:token", async (req, res) => {
   try {
     const result = await db.query(
       `SELECT j.*, p.name AS printer_name
@@ -288,6 +288,18 @@ router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
           }
         })
         .catch(err => console.error('[push] DB error:', err.message));
+    }
+
+    // ── Clean up uploaded PDF once the job reaches a terminal state ──
+    const TERMINAL_STATUSES = ['done', 'failed', 'cancelled'];
+    if (TERMINAL_STATUSES.includes(status) && job.file_path) {
+      fs.unlink(job.file_path, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.error(`[cleanup] Failed to delete ${job.file_path}:`, err.message);
+        } else if (!err) {
+          console.log(`[cleanup] Deleted ${job.file_path}`);
+        }
+      });
     }
 
     res.json({ job });

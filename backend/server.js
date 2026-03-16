@@ -53,6 +53,12 @@ app.use("/api/auth/login", rateLimit({
   message: { error: "Too many login attempts, please try again later." },
 }));
 
+app.use("/api/auth/otp/send", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many OTP requests. Please wait 15 minutes." },
+}));
+
 app.use("/api/", rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -94,6 +100,27 @@ require("./config/redis");
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log("CampusCopy API running on port " + PORT);
+
+  // ── Printer offline sweep ─────────────────────────────────────
+  // Every 2 minutes, mark any printer offline whose heartbeat is stale.
+  // Handles bridges that crash without sending POST /api/printers/:id/offline.
+  const pool = require("./config/db");
+  setInterval(async () => {
+    try {
+      const { rowCount } = await pool.query(
+        `UPDATE printers SET is_online = false
+         WHERE is_online = true
+         AND last_heartbeat < NOW() - INTERVAL '2 minutes'`
+      );
+      if (rowCount > 0) {
+        console.log(`[sweep] Marked ${rowCount} printer(s) offline (stale heartbeat)`);
+        const io = httpServer._events?.request?._router && app.get("io");
+        if (io) io.emit("printer_sweep", { offline_count: rowCount });
+      }
+    } catch (err) {
+      console.error("[sweep] Printer offline sweep error:", err.message);
+    }
+  }, 2 * 60 * 1000);
 
   // ── Keep-alive: prevents Render free tier from sleeping ──────
   // Pings /health every 14 min. Set RENDER_EXTERNAL_URL in Render env vars.

@@ -29,4 +29,14 @@ const verifyWebhookSignature = (rawBody, signature) => {
   return expected === signature;
 };
 
-module.exports = { createOrder, verifyWebhookSignature };
+// createRefund — full refund for a given Razorpay payment ID
+const createRefund = async (paymentId, keyId, keySecret) => {
+  const client = (keyId && keySecret)
+    ? new Razorpay({ key_id: keyId, key_secret: keySecret })
+    : defaultClient;
+
+  const refund = await client.payments.refund(paymentId, {});
+  return refund;
+};
+
+module.exports = { createOrder, createRefund, verifyWebhookSignature };

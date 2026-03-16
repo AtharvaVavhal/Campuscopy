@@ -2,7 +2,7 @@
 
 const db     = require("../config/db");
 const Coupon = require("../models/coupon");
-const { createOrder, verifyWebhookSignature } = require("../utils/razorpay");
+const { createOrder, createRefund, verifyWebhookSignature } = require("../utils/razorpay");
 
 // ─── POST /api/payments/create-order ─────────────────────────
 async function createPaymentOrder(req, res) {
@@ -157,6 +157,39 @@ async function webhook(req, res) {
     }
   }
 
+  if (event.event === "payment.failed") {
+    const payment = event.payload.payment.entity;
+    const orderId = payment.order_id;
+
+    try {
+      const { rows } = await db.query(
+        `SELECT * FROM jobs WHERE razorpay_order_id = $1`,
+        [orderId]
+      );
+      const job = rows[0];
+      if (!job) {
+        console.warn("Webhook: job not found for failed order", orderId);
+        return res.json({ ok: true });
+      }
+
+      // Only mark failed if still pending — don't overwrite a paid job
+      await db.query(
+        `UPDATE jobs SET status = 'failed', updated_at = NOW()
+         WHERE id = $1::uuid AND status = 'pending'`,
+        [job.id]
+      );
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`job:${job.id}`).emit("job_update", { id: job.id, status: "failed" });
+      }
+
+      console.log(`❌ Payment failed: job ${job.id} — ${payment.error_description || 'unknown reason'}`);
+    } catch (err) {
+      console.error("Webhook payment.failed error:", err);
+    }
+  }
+
   res.json({ ok: true });
 }
 
@@ -199,4 +232,76 @@ async function getAnalytics(req, res) {
   }
 }
 
-module.exports = { createPaymentOrder, webhook, getAnalytics };
+// ─── POST /api/payments/refund (admin only) ───────────────────
+async function refundPayment(req, res) {
+  const { job_id } = req.body;
+  if (!job_id) return res.status(400).json({ error: "job_id is required" });
+
+  try {
+    // Fetch job with college Razorpay keys
+    const { rows } = await db.query(
+      `SELECT j.*, c.razorpay_key_id, c.razorpay_key_secret
+       FROM jobs j
+       LEFT JOIN colleges c ON c.id::text = j.college_id::text
+       WHERE j.id = $1::uuid`,
+      [job_id]
+    );
+    const job = rows[0];
+    if (!job) return res.status(404).json({ error: "Job not found" });
+
+    // Only refund jobs that were paid
+    const REFUNDABLE = ['paid', 'failed', 'cancelled'];
+    if (!REFUNDABLE.includes(job.status)) {
+      return res.status(400).json({
+        error: `Job status '${job.status}' is not refundable. Must be one of: ${REFUNDABLE.join(', ')}`
+      });
+    }
+
+    if (!job.razorpay_order_id) {
+      return res.status(400).json({ error: "No Razorpay order found for this job — nothing to refund" });
+    }
+
+    // Fetch the payment ID from Razorpay using the order ID
+    const rzpKeyId     = job.razorpay_key_id     || process.env.RAZORPAY_KEY_ID;
+    const rzpKeySecret = job.razorpay_key_secret || process.env.RAZORPAY_KEY_SECRET;
+
+    const Razorpay = require('razorpay');
+    const client = new Razorpay({ key_id: rzpKeyId, key_secret: rzpKeySecret });
+
+    const payments = await client.orders.fetchPayments(job.razorpay_order_id);
+    const captured = payments.items?.find(p => p.status === 'captured');
+
+    if (!captured) {
+      return res.status(400).json({ error: "No captured payment found for this order — cannot refund" });
+    }
+
+    // Issue full refund
+    const refund = await createRefund(captured.id, rzpKeyId, rzpKeySecret);
+
+    // Mark job cancelled and record refund ID
+    await db.query(
+      `UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1::uuid`,
+      [job_id]
+    );
+
+    // Emit socket update
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`job:${job_id}`).emit("job_update", { id: job_id, status: "cancelled" });
+    }
+
+    console.log(`💸 Refund issued: job ${job_id} → Razorpay refund ${refund.id}`);
+
+    return res.json({
+      message: "Refund issued successfully",
+      refund_id: refund.id,
+      amount_refunded: refund.amount / 100,
+      job_id,
+    });
+  } catch (err) {
+    console.error("Refund error:", err);
+    return res.status(500).json({ error: err.error?.description || err.message || "Refund failed" });
+  }
+}
+
+module.exports = { createPaymentOrder, webhook, getAnalytics, refundPayment };

@@ -25,6 +25,17 @@ pool.on("error",   (err) => console.error("PostgreSQL error:", err.message));
 
 async function runMigrations() {
   const migrations = [
+    // ── OTP sessions ─────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS otp_sessions (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      phone      TEXT NOT NULL,
+      otp_hash   TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used       BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_otp_phone ON otp_sessions(phone)`,
+
     // ── Push subscriptions ──────────────────────────────────
     `CREATE TABLE IF NOT EXISTS push_subscriptions (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
