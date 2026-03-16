@@ -47,6 +47,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       color       = false,
       double_sided = false,
       phone       = "",
+      email       = "",
       priority    = false,
       page_from   = null,
       page_to     = null,
@@ -86,8 +87,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const result = await db.query(
       `INSERT INTO jobs
          (id, college_id, printer_id, file_name, file_path, pages, copies, color, double_sided,
-          cost, priority, page_from, page_to, status, phone_number, qr_token, qr_code, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'pending',$14,$15,$16,NOW(),NOW())
+          cost, priority, page_from, page_to, status, phone_number, email, qr_token, qr_code, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'pending',$14,$15,$16,$17,NOW(),NOW())
        RETURNING *`,
       [
         jobId, college_id, printer_id,
@@ -95,7 +96,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         parsedPages, parsedCopies,
         isColor, isDoubleSided, cost, isPriority,
         pageFrom, pageTo,
-        phone.trim() || null, qr_token, qr_code,
+        phone.trim() || null,
+        email.trim().toLowerCase() || null,
+        qr_token, qr_code,
       ]
     );
 
@@ -269,12 +272,16 @@ router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
       }
     }
 
-    // ── Enqueue notifications (WhatsApp + push) with retries ─────
+    // ── Enqueue notifications (WhatsApp + email + push) with retries ─
     const NOTIFY_STATUSES = ['printing', 'done', 'failed'];
     if (NOTIFY_STATUSES.includes(status)) {
       if (job.phone_number) {
         notificationsQueue.add('whatsapp', { jobId: job.id, status })
           .catch(err => console.error('[queue] WhatsApp enqueue error:', err.message));
+      }
+      if (job.email) {
+        notificationsQueue.add('email', { jobId: job.id, status })
+          .catch(err => console.error('[queue] Email enqueue error:', err.message));
       }
       notificationsQueue.add('push', { jobId: job.id, status })
         .catch(err => console.error('[queue] Push enqueue error:', err.message));

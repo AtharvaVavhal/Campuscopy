@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   discount_amount     NUMERIC(10,2) DEFAULT 0,
   loyalty_points_used INTEGER DEFAULT 0,
   phone_number        VARCHAR(20),
+  email               TEXT,
   status              VARCHAR(20) NOT NULL DEFAULT 'pending'
                         CHECK (status IN ('pending','paid','queued','printing','done','failed','cancelled')),
   razorpay_order_id   VARCHAR(100),

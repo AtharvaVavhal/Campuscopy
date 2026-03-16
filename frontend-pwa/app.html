@@ -334,6 +334,11 @@ input:checked+.slider:before{transform:translateX(22px);background:white;}
       <input type="tel" id="phone" placeholder="+91 98765 43210"/>
       <div class="field-hint"><em>We'll WhatsApp you when your print is done</em></div>
     </div>
+    <div class="field" style="margin-top:12px;">
+      <label>📧 Email <span style="color:rgba(238,238,245,0.35);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">— optional fallback</span></label>
+      <input type="email" id="email" placeholder="you@college.edu"/>
+      <div class="field-hint"><em>Get a confirmation email too — useful if you don't have WhatsApp</em></div>
+    </div>
     <div class="row2" style="margin-top:16px;">
       <div class="field" style="margin-top:0;">
         <label>Copies</label>
@@ -948,6 +953,7 @@ async function doUpload() {
     fd.append('color', document.getElementById('color').checked);
     fd.append('double_sided', document.getElementById('ds').checked);
     fd.append('phone', document.getElementById('phone').value || '');
+    fd.append('email', (document.getElementById('email') || {}).value || '');
     fd.append('priority', isPriority);
     if (hasRange) { fd.append('page_from', from); fd.append('page_to', to); }
     const r = await fetch(API + '/api/jobs/upload', { method: 'POST', body: fd });

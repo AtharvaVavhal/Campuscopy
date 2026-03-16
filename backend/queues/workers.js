@@ -8,6 +8,7 @@ const db       = require('../config/db');
 const Coupon   = require('../models/coupon');
 const { notifyJobStatus, sendWhatsApp } = require('../utils/whatsapp');
 const { sendPush, buildPayload }        = require('../utils/push');
+const { notifyJobStatusByEmail }        = require('../utils/email');
 
 // ══════════════════════════════════════════════════════════════
 // QUEUE 1 — post-payment
@@ -107,6 +108,12 @@ async function processNotification(bullJob) {
     if (!job.phone_number) return;
     await notifyJobStatus(job, status);
     console.log(`[notifications] WhatsApp sent for job ${jobId} → ${status}`);
+  }
+
+  if (bullJob.name === 'email') {
+    if (!job.email) return;
+    await notifyJobStatusByEmail(job, status);
+    console.log(`[notifications] Email sent for job ${jobId} → ${status}`);
   }
 
   if (bullJob.name === 'push') {

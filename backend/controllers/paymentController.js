@@ -132,6 +132,14 @@ async function webhook(req, res) {
         });
       }
 
+      // Enqueue email notification for payment confirmation
+      if (job.email) {
+        await notificationsQueue.add('email', {
+          jobId:  job.id,
+          status: 'paid',
+        });
+      }
+
       console.log(`✅ Payment webhook received: job ${job.id} queued for processing`);
     } catch (err) {
       console.error("Webhook enqueue error:", err);

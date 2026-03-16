@@ -131,6 +131,9 @@ async function runMigrations() {
     `ALTER TABLE colleges ADD COLUMN IF NOT EXISTS status              TEXT DEFAULT 'active'`,
     `ALTER TABLE colleges ADD COLUMN IF NOT EXISTS email               TEXT`,
 
+    // ── Student email for job notifications ─────────────────
+    `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS email TEXT`,
+
   ];
 
   for (const sql of migrations) {
