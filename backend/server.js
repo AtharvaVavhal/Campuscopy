@@ -98,8 +98,19 @@ require("./config/db");
 require("./config/redis");
 
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log("CampusCopy API running on port " + PORT);
+
+  // ── Start BullMQ workers ──────────────────────────────────────
+  // Workers need the DB to be ready — start them after listen() fires.
+  try {
+    const { startWorkers } = require("./queues/workers");
+    const io = app.get("io");
+    await startWorkers(io);
+  } catch (err) {
+    console.error("Failed to start BullMQ workers:", err.message);
+    console.warn("Continuing without queue workers — notifications and post-payment processing will be unavailable.");
+  }
 
   // ── Printer offline sweep ─────────────────────────────────────
   // Every 2 minutes, mark any printer offline whose heartbeat is stale.

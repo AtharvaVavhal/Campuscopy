@@ -1,0 +1,81 @@
+// __tests__/socket.test.js
+// Tests for: Fix 3 (socket emits 'job_update' not 'job_status')
+
+const { emitJobStatus, emitToJob, emitToPrinter } = require('../utils/socket');
+
+describe('emitJobStatus — Fix 3: correct event name', () => {
+  let mockIo;
+
+  beforeEach(() => {
+    mockIo = {
+      to:   jest.fn().mockReturnThis(),
+      emit: jest.fn(),
+    };
+  });
+
+  test('emits "job_update" (not "job_status") to the job room', () => {
+    const job = { id: 'job-1', status: 'printing', updated_at: new Date(), printer_id: null };
+    emitJobStatus(mockIo, job);
+
+    expect(mockIo.to).toHaveBeenCalledWith('job:job-1');
+    expect(mockIo.emit).toHaveBeenCalledWith('job_update', expect.objectContaining({
+      jobId:  'job-1',
+      status: 'printing',
+    }));
+  });
+
+  test('never emits the old "job_status" event name', () => {
+    const job = { id: 'job-2', status: 'done', updated_at: new Date(), printer_id: null };
+    emitJobStatus(mockIo, job);
+
+    const emittedEvents = mockIo.emit.mock.calls.map(c => c[0]);
+    expect(emittedEvents).not.toContain('job_status');
+  });
+
+  test('also emits to printer room when printer_id is set', () => {
+    const job = { id: 'job-3', status: 'done', updated_at: new Date(), printer_id: 'printer-1' };
+    emitJobStatus(mockIo, job);
+
+    const rooms = mockIo.to.mock.calls.map(c => c[0]);
+    expect(rooms).toContain('job:job-3');
+    expect(rooms).toContain('printer:printer-1');
+  });
+
+  test('does not emit to printer room when printer_id is null', () => {
+    const job = { id: 'job-4', status: 'paid', updated_at: new Date(), printer_id: null };
+    emitJobStatus(mockIo, job);
+
+    const rooms = mockIo.to.mock.calls.map(c => c[0]);
+    expect(rooms.every(r => !r.startsWith('printer:'))).toBe(true);
+  });
+
+  test('payload contains jobId, status, and updatedAt', () => {
+    const updatedAt = new Date().toISOString();
+    const job = { id: 'job-5', status: 'queued', updated_at: updatedAt, printer_id: null };
+    emitJobStatus(mockIo, job);
+
+    expect(mockIo.emit).toHaveBeenCalledWith('job_update', {
+      jobId:     'job-5',
+      status:    'queued',
+      updatedAt: updatedAt,
+    });
+  });
+});
+
+describe('emitToJob', () => {
+  test('emits to correct room', () => {
+    const io = { to: jest.fn().mockReturnThis(), emit: jest.fn() };
+    emitToJob(io, 'job-99', 'some_event', { data: 1 });
+    expect(io.to).toHaveBeenCalledWith('job:job-99');
+    expect(io.emit).toHaveBeenCalledWith('some_event', { data: 1 });
+  });
+});
+
+describe('emitToPrinter', () => {
+  test('emits to correct room', () => {
+    const io = { to: jest.fn().mockReturnThis(), emit: jest.fn() };
+    emitToPrinter(io, 'printer-42', 'queue_update', { status: 'done' });
+    expect(io.to).toHaveBeenCalledWith('printer:printer-42');
+    expect(io.emit).toHaveBeenCalledWith('queue_update', { status: 'done' });
+  });
+});

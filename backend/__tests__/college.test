@@ -1,0 +1,178 @@
+// __tests__/colleges.test.js
+// Tests for: Fix 6 (super-admin guard on GET /all)
+
+const request = require('supertest');
+const express = require('express');
+const { adminToken, superAdminToken, mockQuery, mockQuerySequence } = require('./helpers/setup');
+
+jest.mock('../config/db');
+
+const db = require('../config/db');
+
+function buildApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/colleges', require('../routes/colleges'));
+  return app;
+}
+
+// ─────────────────────────────────────────────────────────────
+describe('GET /api/colleges/all — Fix 6: super-admin guard', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('allows superadmin to list all colleges', async () => {
+    db.query = mockQuery({
+      rows: [
+        { id: 'col-1', name: 'VIT', admin_count: 1, total_jobs: 50, total_revenue: '5000' },
+        { id: 'col-2', name: 'MIT', admin_count: 2, total_jobs: 30, total_revenue: '3000' },
+      ],
+    });
+
+    const app = buildApp();
+    const res = await request(app)
+      .get('/api/colleges/all')
+      .set('Authorization', `Bearer ${superAdminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.colleges).toHaveLength(2);
+  });
+
+  test('blocks regular admin with 403 — not 401', async () => {
+    const app = buildApp();
+    const res = await request(app)
+      .get('/api/colleges/all')
+      .set('Authorization', `Bearer ${adminToken()}`); // role: 'admin'
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/super admin/i);
+  });
+
+  test('blocks unauthenticated request with 401', async () => {
+    const app = buildApp();
+    const res = await request(app).get('/api/colleges/all');
+    expect(res.status).toBe(401);
+  });
+
+  test('does not leak revenue data to regular admins', async () => {
+    const app = buildApp();
+    const res = await request(app)
+      .get('/api/colleges/all')
+      .set('Authorization', `Bearer ${adminToken()}`);
+
+    // Must be 403, must not contain college revenue data
+    expect(res.status).toBe(403);
+    expect(res.body.colleges).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+describe('GET /api/colleges/settings — admin settings', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('returns college settings for authenticated admin', async () => {
+    db.query = mockQuerySequence(
+      { rows: [{ college_id: 'college-uuid-1' }] },   // SELECT college_id FROM admins
+      { rows: [{ id: 'college-uuid-1', name: 'VIT', razorpay_key_id: 'rzp_123', platform_fee_pct: 3.0, status: 'active' }] },  // SELECT FROM colleges
+      { rows: [{ id: 'printer-1', name: 'Main Printer' }] }, // SELECT FROM printers
+    );
+
+    const app = buildApp();
+    const res = await request(app)
+      .get('/api/colleges/settings')
+      .set('Authorization', `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.college.name).toBe('VIT');
+    expect(res.body.printers).toHaveLength(1);
+    // Must not expose razorpay_key_secret
+    expect(res.body.college.razorpay_key_secret).toBeUndefined();
+  });
+
+  test('rejects unauthenticated request', async () => {
+    const app = buildApp();
+    const res = await request(app).get('/api/colleges/settings');
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+describe('POST /api/colleges/signup — public registration', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('creates college, admin, and printer in a transaction', async () => {
+    const mockClient = {
+      query:   jest.fn()
+        .mockResolvedValueOnce({})                    // BEGIN
+        .mockResolvedValueOnce({ rows: [] })          // check existing admin
+        .mockResolvedValueOnce({ rows: [] })          // INSERT college
+        .mockResolvedValueOnce({ rows: [] })          // INSERT admin
+        .mockResolvedValueOnce({ rows: [] })          // INSERT printer
+        .mockResolvedValueOnce({}),                   // COMMIT
+      release: jest.fn(),
+    };
+    db.connect = jest.fn().mockResolvedValue(mockClient);
+
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/colleges/signup')
+      .send({
+        college_name:   'Test College',
+        admin_name:     'Test Admin',
+        admin_email:    'admin@testcollege.com',
+        admin_password: 'securepassword123',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.college_id).toBeDefined();
+    expect(res.body.printer_id).toBeDefined();
+    expect(res.body.login_email).toBe('admin@testcollege.com');
+    expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+  });
+
+  test('rejects duplicate admin email', async () => {
+    const mockClient = {
+      query:   jest.fn()
+        .mockResolvedValueOnce({})                            // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'existing' }] }) // existing admin found
+        .mockResolvedValueOnce({}),                           // ROLLBACK
+      release: jest.fn(),
+    };
+    db.connect = jest.fn().mockResolvedValue(mockClient);
+
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/colleges/signup')
+      .send({
+        college_name:   'Test College',
+        admin_name:     'Test Admin',
+        admin_email:    'existing@test.com',
+        admin_password: 'securepassword123',
+      });
+
+    expect(res.status).toBe(409);
+    expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+  });
+
+  test('rejects missing required fields', async () => {
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/colleges/signup')
+      .send({ college_name: 'Test' }); // missing admin fields
+
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects password shorter than 8 chars', async () => {
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/colleges/signup')
+      .send({
+        college_name:   'Test College',
+        admin_name:     'Admin',
+        admin_email:    'admin@test.com',
+        admin_password: 'short',
+      });
+
+    expect(res.status).toBe(400);
+  });
+});

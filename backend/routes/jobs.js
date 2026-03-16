@@ -13,6 +13,7 @@ const studentAuth     = require("../middleware/studentAuth");
 const upload  = require("../middleware/upload");
 const { notifyJobStatus } = require("../utils/whatsapp");
 const { sendPush, buildPayload } = require("../utils/push");
+const { notificationsQueue } = require("../queues/queues");
 
 // ─── Bridge auth: validates x-api-key against DB ─────────────
 async function bridgeAuth(req, res, next) {
@@ -268,26 +269,15 @@ router.patch("/:id/status", adminOrBridgeAuth, async (req, res) => {
       }
     }
 
-    if (job.phone_number) notifyJobStatus(job, status);
-
-    const pushPayload = typeof buildPayload === 'function' ? buildPayload(job, status) : null;
-    if (pushPayload) {
-      db.query('SELECT * FROM push_subscriptions WHERE job_id = $1', [job.id])
-        .then(async ({ rows: subs }) => {
-          for (const sub of subs) {
-            try {
-              await sendPush(
-                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-                pushPayload
-              );
-            } catch (err) {
-              if (err.statusCode === 410) {
-                db.query('DELETE FROM push_subscriptions WHERE id = $1', [sub.id]).catch(() => {});
-              }
-            }
-          }
-        })
-        .catch(err => console.error('[push] DB error:', err.message));
+    // ── Enqueue notifications (WhatsApp + push) with retries ─────
+    const NOTIFY_STATUSES = ['printing', 'done', 'failed'];
+    if (NOTIFY_STATUSES.includes(status)) {
+      if (job.phone_number) {
+        notificationsQueue.add('whatsapp', { jobId: job.id, status })
+          .catch(err => console.error('[queue] WhatsApp enqueue error:', err.message));
+      }
+      notificationsQueue.add('push', { jobId: job.id, status })
+        .catch(err => console.error('[queue] Push enqueue error:', err.message));
     }
 
     // ── Clean up uploaded PDF once the job reaches a terminal state ──

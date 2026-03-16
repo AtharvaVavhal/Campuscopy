@@ -3,6 +3,7 @@
 const db     = require("../config/db");
 const Coupon = require("../models/coupon");
 const { createOrder, createRefund, verifyWebhookSignature } = require("../utils/razorpay");
+const { postPaymentQueue, notificationsQueue } = require("../queues/queues");
 
 // ─── POST /api/payments/create-order ─────────────────────────
 async function createPaymentOrder(req, res) {
@@ -114,46 +115,26 @@ async function webhook(req, res) {
         return res.json({ ok: true });
       }
 
-      await db.query(
-        `UPDATE jobs SET status = 'paid', updated_at = NOW() WHERE id = $1::uuid`,
-        [job.id]
-      );
+      // Enqueue post-payment processing (mark paid, coupon, loyalty points).
+      // BullMQ retries up to 3x with exponential backoff if anything fails.
+      await postPaymentQueue.add('process-payment', {
+        jobId:   job.id,
+        orderId: orderId,
+      }, {
+        jobId: `payment-${job.id}`, // deduplication — safe to re-receive same webhook
+      });
 
-      const io = req.app.get("io");
-      if (io) {
-        io.to(`job:${job.id}`).emit("job_update", { id: job.id, status: "paid" });
-        io.emit("queue_update", { jobId: job.id, status: "paid" });
-      }
-
-      if (job.coupon_id) {
-        await Coupon.recordUse(job.coupon_id, job.id, job.discount_amount || 0);
-      }
-
-      if (job.loyalty_points_used > 0 && job.phone_number) {
-        await db.query(
-          `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
-           VALUES ($1, $2, $3::uuid, 'redeem', $4, $5)`,
-          [job.phone_number, job.college_id || 'college1', job.id,
-           job.loyalty_points_used,
-           `Redeemed ${job.loyalty_points_used} pts for ₹${(job.loyalty_points_used * 0.10).toFixed(0)} off`]
-        );
-      }
-
+      // Enqueue WhatsApp notification for payment confirmation
       if (job.phone_number) {
-        const amountPaid = parseFloat(job.cost) - parseFloat(job.discount_amount || 0);
-        const ptsEarned = Math.floor(Math.max(amountPaid, 0));
-        await db.query(
-          `INSERT INTO loyalty_transactions (phone_number, college_id, job_id, type, points, description)
-           VALUES ($1, $2, $3::uuid, 'earn', $4, $5)`,
-          [job.phone_number, job.college_id || 'college1', job.id,
-           ptsEarned,
-           `Earned ${ptsEarned} pts for printing ${job.file_name}`]
-        );
+        await notificationsQueue.add('whatsapp', {
+          jobId:  job.id,
+          status: 'paid',
+        });
       }
 
-      console.log(`✅ Payment captured: job ${job.id}`);
+      console.log(`✅ Payment webhook received: job ${job.id} queued for processing`);
     } catch (err) {
-      console.error("Webhook processing error:", err);
+      console.error("Webhook enqueue error:", err);
     }
   }
 
