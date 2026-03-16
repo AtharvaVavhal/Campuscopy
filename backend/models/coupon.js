@@ -40,16 +40,19 @@ const Coupon = {
   },
 
   async recordUse(coupon_id, job_id, saved_amount) {
-    // Insert use record
-    await pool.query(
-      'INSERT INTO coupon_uses (coupon_id, job_id, saved_amount) VALUES ($1, $2, $3)',
+    // Insert use record — ON CONFLICT ensures idempotency if webhook fires twice
+    const { rowCount } = await pool.query(
+      `INSERT INTO coupon_uses (coupon_id, job_id, saved_amount) VALUES ($1, $2, $3)
+       ON CONFLICT (job_id) DO NOTHING`,
       [coupon_id, job_id, saved_amount]
     );
-    // Decrement uses_left if not unlimited
-    await pool.query(
-      'UPDATE coupons SET uses_left = uses_left - 1 WHERE id = $1 AND uses_left IS NOT NULL',
-      [coupon_id]
-    );
+    // Only decrement uses_left if a row was actually inserted (not a duplicate)
+    if (rowCount > 0) {
+      await pool.query(
+        'UPDATE coupons SET uses_left = uses_left - 1 WHERE id = $1 AND uses_left IS NOT NULL',
+        [coupon_id]
+      );
+    }
   },
 
   async create({ college_id, code, discount_type, discount_value, min_order, uses_left, expires_at }) {

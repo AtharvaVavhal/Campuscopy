@@ -140,14 +140,14 @@ router.post('/redeem', async (req, res) => {
     if (isNaN(pts) || pts < MIN_REDEEM)
       return res.status(400).json({ error: `Minimum ${MIN_REDEEM} points required to redeem` });
 
-    // Get current balance
-    const normalised = phone.replace(/\D/g, '');
+    // Get current balance — use RIGHT() for consistent phone normalisation (BUG FIX)
+    const last10 = normalised.replace(/^91/, '').slice(-10);
     const { rows: bal } = await db.query(
       `SELECT
          COALESCE(SUM(CASE WHEN type='earn'   THEN points ELSE 0 END), 0)::int AS earned,
          COALESCE(SUM(CASE WHEN type='redeem' THEN points ELSE 0 END), 0)::int AS redeemed
-       FROM loyalty_transactions WHERE phone_number LIKE $1`,
-      ['%' + normalised.replace(/^91/, '')]
+       FROM loyalty_transactions WHERE RIGHT(phone_number, 10) = $1`,
+      [last10]
     );
     const balance = parseInt(bal[0].earned) - parseInt(bal[0].redeemed);
     if (pts > balance)
@@ -184,7 +184,8 @@ router.post('/redeem', async (req, res) => {
 
 // ─── POST /api/loyalty/confirm-redeem ─ deduct after payment ─
 // Called internally by payment webhook after payment.captured
-router.post('/confirm-redeem', async (req, res) => {
+// Requires admin JWT to prevent external abuse
+router.post('/confirm-redeem', auth, async (req, res) => {
   try {
     const { phone, job_id, points_used, college_id } = req.body;
     if (!phone || !job_id || !points_used) return res.status(400).json({ error: 'Missing fields' });

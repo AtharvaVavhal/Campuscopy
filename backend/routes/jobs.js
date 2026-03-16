@@ -208,7 +208,10 @@ router.get("/qr/:token", async (req, res) => {
       [req.params.token]
     );
     if (!result.rows.length) return res.status(404).json({ error: "Invalid QR token" });
-    res.json({ job: result.rows[0] });
+
+    // BUG FIX: strip internal fields before returning to unauthenticated callers
+    const { file_path, razorpay_order_id, coupon_id, ...safeJob } = result.rows[0];
+    res.json({ job: safeJob });
   } catch (err) {
     res.status(500).json({ error: "Verification failed" });
   }
@@ -225,7 +228,10 @@ router.get("/:id", async (req, res) => {
       [req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: "Job not found" });
-    res.json({ job: result.rows[0] });
+
+    // BUG FIX: strip sensitive/internal fields before returning to unauthenticated callers
+    const { file_path, razorpay_order_id, coupon_id, ...safeJob } = result.rows[0];
+    res.json({ job: safeJob });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch job" });
   }
@@ -237,6 +243,12 @@ router.get("/:id/file", bridgeAuth, async (req, res) => {
     const result = await db.query("SELECT * FROM jobs WHERE id = $1", [req.params.id]);
     const job = result.rows[0];
     if (!job) return res.status(404).json({ error: "Job not found" });
+
+    // BUG FIX: ensure the requesting bridge owns this job's printer
+    if (job.printer_id !== req._printerId) {
+      return res.status(403).json({ error: "This job does not belong to your printer" });
+    }
+
     if (!fs.existsSync(job.file_path)) return res.status(404).json({ error: "File not found on disk" });
     res.download(job.file_path, job.file_name);
   } catch (err) {

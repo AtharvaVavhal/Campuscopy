@@ -157,14 +157,27 @@ async function processStaleJobs() {
   const TWO_HOURS_AGO = `NOW() - INTERVAL '2 hours'`;
 
   // 1. Cancel pending jobs older than 2 hours (abandoned checkouts)
-  const { rowCount: cancelledCount } = await db.query(
+  //    Also fetch file_paths so we can clean up disk storage.
+  const { rows: cancelledRows } = await db.query(
     `UPDATE jobs
      SET status = 'cancelled', updated_at = NOW()
      WHERE status = 'pending'
-     AND created_at < ${TWO_HOURS_AGO}`
+     AND created_at < ${TWO_HOURS_AGO}
+     RETURNING file_path`
   );
-  if (cancelledCount > 0) {
-    console.log(`[stale-jobs] Cancelled ${cancelledCount} abandoned pending job(s)`);
+  if (cancelledRows.length > 0) {
+    console.log(`[stale-jobs] Cancelled ${cancelledRows.length} abandoned pending job(s)`);
+    // Delete uploaded PDFs to reclaim disk space
+    const fs = require('fs');
+    for (const { file_path } of cancelledRows) {
+      if (file_path) {
+        fs.unlink(file_path, (err) => {
+          if (err && err.code !== 'ENOENT') {
+            console.error(`[stale-jobs] Failed to delete ${file_path}:`, err.message);
+          }
+        });
+      }
+    }
   }
 
   // 2. Delete expired, used OTP sessions (keep last 24h for debugging)
@@ -178,7 +191,7 @@ async function processStaleJobs() {
   }
 
   console.log(`[stale-jobs] ✅ Sweep complete`);
-  return { cancelledCount, otpCount };
+  return { cancelledCount: cancelledRows.length, otpCount };
 }
 
 // ══════════════════════════════════════════════════════════════

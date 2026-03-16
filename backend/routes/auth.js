@@ -1,35 +1,25 @@
-const express = require("express");
-const { body } = require("express-validator");
-const { login, register, me } = require("../controllers/authController");
-const auth = require("../middleware/auth");
-const validate = require("../middleware/validate");
+// middleware/auth.js
 
-const router = express.Router();
+const jwt = require("jsonwebtoken");
 
-router.post(
-  "/login",
-  [
-    body("email").isEmail().normalizeEmail(),
-    body("password").isLength({ min: 6 }),
-  ],
-  validate,
-  login
-);
+function auth(req, res, next) {
+  // NOTE: x-api-key is intentionally NOT accepted here — that header is only
+  // for the per-printer bridgeAuth middleware in routes/jobs.js.
+  // Allowing it here would let any bridge key bypass all admin JWT checks.
 
-// ✅ FIX BUG02: /register is admin-only at all times. Must supply a valid JWT.
-router.post(
-  "/register",
-  auth,
-  [
-    body("college_id").notEmpty(),
-    body("name").notEmpty(),
-    body("email").isEmail().normalizeEmail(),
-    body("password").isLength({ min: 8 }),
-  ],
-  validate,
-  register
-);
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
+  }
 
-router.get("/me", auth, me);
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
 
-module.exports = router;
+module.exports = auth;

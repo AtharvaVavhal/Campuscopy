@@ -35,7 +35,7 @@ async function createPaymentOrder(req, res) {
         finalAmount = result.final_amount;
         await db.query(
           `UPDATE jobs SET coupon_id = $1, discount_amount = $2 WHERE id = $3::uuid`,
-          [result.id, result.discount_amount, job_id]
+          [result.coupon_id, result.discount_amount, job_id]  // BUG FIX: was result.id
         );
       }
     }
@@ -184,6 +184,10 @@ async function webhook(req, res) {
 
 // ─── GET analytics (admin) ────────────────────────────────────
 async function getAnalytics(req, res) {
+  // BUG FIX: scope all queries to the requesting admin's college
+  const college_id = req.user?.college_id;
+  if (!college_id) return res.status(403).json({ error: "college_id missing from token" });
+
   try {
     const { rows: summary } = await db.query(`
       SELECT
@@ -192,27 +196,28 @@ async function getAnalytics(req, res) {
         COALESCE(SUM(cost) FILTER (WHERE status = 'done'
           AND created_at >= NOW() - INTERVAL '30 days'), 0)              AS revenue_30d,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS jobs_30d
-      FROM jobs
-    `);
+      FROM jobs WHERE college_id = $1
+    `, [college_id]);
 
     const { rows: daily } = await db.query(`
       SELECT DATE(created_at) AS date,
              COUNT(*) FILTER (WHERE status = 'done') AS jobs,
              COALESCE(SUM(cost) FILTER (WHERE status = 'done'), 0) AS revenue
       FROM jobs
-      WHERE created_at >= NOW() - INTERVAL '30 days'
+      WHERE college_id = $1
+        AND created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE(created_at)
       ORDER BY date ASC
-    `);
+    `, [college_id]);
 
     const { rows: printers } = await db.query(`
       SELECT p.name, COUNT(j.id) AS job_count, COALESCE(SUM(j.cost),0) AS revenue
       FROM jobs j
       JOIN printers p ON p.id = j.printer_id
-      WHERE j.status = 'done'
+      WHERE j.status = 'done' AND j.college_id = $1
       GROUP BY p.name
       ORDER BY job_count DESC LIMIT 5
-    `);
+    `, [college_id]);
 
     res.json({ summary: summary[0], daily, printers });
   } catch (err) {

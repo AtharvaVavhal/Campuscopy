@@ -75,15 +75,8 @@ app.use("/api/push",     require("./routes/push"));
 app.use("/api/colleges", require("./routes/colleges"));
 app.use("/api/admin",    require("./routes/admin"));
 
-app.get("/debug/routes", (req, res) => {
-  const auth = require("./routes/auth_routes");
-  const ctrl = require("./controllers/authController");
-  res.json({
-    auth_routes_loaded: true,
-    controller_exports: Object.keys(ctrl),
-    routes: auth.stack.map(r => r.route?.path).filter(Boolean)
-  });
-});
+// Debug routes endpoint intentionally removed — was exposing internal route
+// structure to unauthenticated callers in production.
 
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date() }));
 
