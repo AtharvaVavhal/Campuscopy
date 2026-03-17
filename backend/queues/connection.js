@@ -5,9 +5,11 @@
 
 function getConnection() {
   if (process.env.REDIS_URL) {
+    // Use TLS only for rediss:// URLs (Upstash) — not for Render internal redis://
+    const isTLS = process.env.REDIS_URL.startsWith("rediss://");
     return {
       url: process.env.REDIS_URL,
-      tls: { rejectUnauthorized: false },
+      ...(isTLS ? { tls: { rejectUnauthorized: false } } : {}),
       maxRetriesPerRequest: null, // required by BullMQ
     };
   }

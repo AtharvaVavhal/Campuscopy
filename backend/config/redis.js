@@ -1,8 +1,11 @@
 const Redis = require("ioredis");
 
+// Use TLS only for rediss:// URLs (Upstash) — not for Render internal redis://
+const isTLS = process.env.REDIS_URL?.startsWith("rediss://");
+
 const redis = process.env.REDIS_URL
   ? new Redis(process.env.REDIS_URL, {
-      tls: { rejectUnauthorized: false },
+      ...(isTLS ? { tls: { rejectUnauthorized: false } } : {}),
       retryStrategy(times) {
         if (times > 5) return null;
         return Math.min(times * 200, 2000);
