@@ -1,4 +1,5 @@
 const Redis = require("ioredis");
+console.log("REDIS_URL =", process.env.REDIS_URL);
 
 // Use TLS only for rediss:// URLs (Upstash) — not for Render internal redis://
 const isTLS = process.env.REDIS_URL?.startsWith("rediss://");

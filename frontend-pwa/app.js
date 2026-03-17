@@ -2,6 +2,7 @@ const API = 'https://campuscopy-api.onrender.com';
   let currentJob = null;
   let socket = null;
   let scannerStream = null;
+  console.log("REDIS_URL =", process.env.REDIS_URL);
 
   // ─── Screen Navigation ───────────────────────────────────────
   function showScreen(name) {
